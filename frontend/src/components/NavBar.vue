@@ -1,7 +1,7 @@
 <template>
   <header>
     <div class="nav-container">
-      <a href="#" class="logo">
+      <a href="../" class="logo">
         <div class="logo-icon">B</div>
         Bit<span>Items</span>
       </a>
