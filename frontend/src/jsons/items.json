@@ -1,0 +1,94 @@
+[
+  {
+    "id": 1,
+    "itemName": "Vandal Prime Skin",
+    "price": 25,
+    "qty": 4,
+    "tags": ["skin", "vandal", "prime", "valorant"],
+    "user": "AceShooter99",
+    "description": "Descrizione generale Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+    "images": [
+      "https://via.placeholder.com/440x180?text=Item+1",
+      "https://via.placeholder.com/440x180?text=Item+2",
+      "https://via.placeholder.com/440x180?text=Item+3"
+    ],
+    "gameName": "Valorant",
+    "isHot": true,
+    "createdAt": "2024-06-01"
+  },
+  {
+    "id": 2,
+    "itemName": "Account Gold IV",
+    "price": 35.00,
+    "qty": 1,
+    "tags": ["account", "gold", "lol"],
+    "user": "SummonerPro",
+    "description": "Account Gold IV per League of Legends, pronto a scalare le classifiche!",
+    "images": [
+      "https://via.placeholder.com/440x180?text=Account+1"
+    ],
+    "gameName": "League of Legends",
+    "isHot": false,
+    "createdAt": "2024-06-04"
+  },
+  {
+    "id": 3,
+    "itemName": "AWP | Dragon Lore",
+    "price": 1500.00,
+    "qty": 1,
+    "tags": ["awp", "dragonlore", "csgo"],
+    "user": "SniperKing",
+    "description": "AWP Dragon Lore rara per veri collezionisti di CS:GO.",
+    "images": [
+      "https://via.placeholder.com/440x180?text=AWP+1"
+    ],
+    "gameName": "CS:GO",
+    "isHot": true,
+    "createdAt": "2024-06-03"
+  },
+  {
+    "id": 4,
+    "itemName": "Spectre Nebula",
+    "price": 12.00,
+    "qty": 1,
+    "tags": ["skin", "spectre"],
+    "user": "NebulaFan",
+    "description": "Skin Spectre Nebula per Valorant.",
+    "images": [
+      "https://via.placeholder.com/440x180?text=Spectre+1"
+    ],
+    "gameName": "Valorant",
+    "isHot": false,
+    "createdAt": "2024-06-05"
+  },
+  {
+    "id": 5,
+    "itemName": "Skin Yasuo Nightbringer",
+    "price": 18.00,
+    "qty": 1,
+    "tags": ["skin", "yasuo"],
+    "user": "WindSamurai",
+    "description": "Skin Yasuo Nightbringer per League of Legends.",
+    "images": [
+      "https://via.placeholder.com/440x180?text=Yasuo+1"
+    ],
+    "gameName": "League of Legends",
+    "isHot": true,
+    "createdAt": "2024-06-02"
+  },
+  {
+    "id": 6,
+    "itemName": "AK-47 | Redline",
+    "price": 45.00,
+    "qty": 1,
+    "tags": ["ak47", "redline"],
+    "user": "RifleMaster",
+    "description": "AK-47 Redline per CS:GO.",
+    "images": [
+      "https://via.placeholder.com/440x180?text=AK47+1"
+    ],
+    "gameName": "CS:GO",
+    "isHot": false,
+    "createdAt": "2024-06-06"
+  }
+] 
