@@ -20,6 +20,15 @@
       <div class="item-desc-box">
         <p class="item-desc">" {{ item.description }} "</p>
       </div>
+      <!-- General Like/Dislike Counter -->
+      <div class="item-general-actions" style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.2rem;">
+        <span class="like" style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+          <i class="fa-regular fa-thumbs-up"></i> {{ generalLikes }}
+        </span>
+        <span class="dislike" style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+          <i class="fa-regular fa-thumbs-down"></i> {{ generalDislikes }}
+        </span>
+      </div>
       <div class="item-reviews">
         <h3>Recensioni</h3>
         <div v-for="review in reviews" :key="review.id" class="review">
@@ -28,10 +37,6 @@
             <span class="review-date">{{ review.date }}</span>
           </div>
           <div class="review-body">{{ review.text }}</div>
-          <div class="review-actions">
-            <span class="like"><i class="fa-regular fa-thumbs-up"></i> {{ review.likes }}</span>
-            <span class="dislike"><i class="fa-regular fa-thumbs-down"></i> {{ review.dislikes }}</span>
-          </div>
         </div>
       </div>
     </div>
@@ -62,17 +67,18 @@
           <span>{{ orderQty }}</span>
           <button @click="orderQty < item.qty && orderQty++">+</button>
         </div>
-        <button class="main-btn">Procedi con l'ordine</button>
+        <button class="main-btn" @click="showPaymentPopup = true">Procedi con l'ordine</button>
       </div>
     </div>
   </div>
-  <div v-else style="padding:2rem; color:var(--error,red); font-size:1.2rem;">Oggetto non trovato.</div>
+  <PaymentPopup v-if="showPaymentPopup" @close="showPaymentPopup = false" />
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import itemsData from '../jsons/items.json'
+import PaymentPopup from '../components/PaymentPopup.vue'
 
 interface Item {
   id: number
@@ -93,13 +99,18 @@ const item = ref<Item | null>(null)
 const imageIndex = ref(0)
 const orderQty = ref(1)
 const currentImage = ref('')
+const showPaymentPopup = ref(false)
 
 const user = { rep: 12 }
 const reviews = [
-  { id: 1, user: 'UserA', date: '2024-06-01', text: 'Ottimo venditore!', likes: 5, dislikes: 0 },
-  { id: 2, user: 'UserB', date: '2024-06-02', text: 'Tutto perfetto, consigliato.', likes: 3, dislikes: 0 },
-  { id: 3, user: 'UserC', date: '2024-06-03', text: 'Spedizione veloce.', likes: 2, dislikes: 1 }
+  { id: 1, user: 'UserA', date: '2024-06-01', text: 'Ottimo venditore!' },
+  { id: 2, user: 'UserB', date: '2024-06-02', text: 'Tutto perfetto, consigliato.' },
+  { id: 3, user: 'UserC', date: '2024-06-03', text: 'Spedizione veloce.' }
 ]
+
+// General like/dislike for the article
+const generalLikes = ref(10)
+const generalDislikes = ref(2)
 
 onMounted(() => {
   const id = Number(route.query.id)
@@ -133,6 +144,10 @@ function goToImage(idx: number) {
   gap: 2rem;
   padding: 2rem 1rem;
   align-items: flex-start;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 .item-main {
   flex: 2;
@@ -253,18 +268,6 @@ function goToImage(idx: number) {
 .review-body {
   color: var(--on-surface);
   margin-bottom: 0.4rem;
-}
-.review-actions {
-  display: flex;
-  gap: 1.2rem;
-  color: var(--secondary);
-  font-size: 1.1rem;
-  align-items: center;
-}
-.like, .dislike {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
 }
 .item-side {
   flex: 1;

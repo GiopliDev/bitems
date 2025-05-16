@@ -1,11 +1,15 @@
 <template>
   <div id="app">
-    <Navbar @show-login="showLogin = true" @show-register="showRegister = true" />
-    <router-view />
+    <Navbar :user="loggedUser" @show-login="showLogin = true" @show-register="showRegister = true" />
+    <div style="display: flex;">
+      <UserSidebar v-if="loggedUser" :user="loggedUser" />
+      <router-view />
+    </div>
     <LoginPopup
       v-if="showLogin"
       @close="showLogin = false"
       @switchToRegister="switchToRegister"
+      @login-success="onLoginSuccess"
     />
     <RegisterPopup
       v-if="showRegister"
@@ -19,18 +23,21 @@
 import Navbar from './components/Navbar.vue'
 import LoginPopup from './components/LoginPopup.vue'
 import RegisterPopup from './components/RegisterPopup.vue'
+import UserSidebar from './components/UserSidebar.vue'
 
 export default {
   name: "App",
   components: {
     Navbar,
     LoginPopup,
-    RegisterPopup
+    RegisterPopup,
+    UserSidebar
   },
   data() {
     return {
       showLogin: false,
-      showRegister: false
+      showRegister: false,
+      loggedUser: null
     }
   },
   methods: {
@@ -41,6 +48,10 @@ export default {
     switchToLogin() {
       this.showRegister = false;
       this.showLogin = true;
+    },
+    onLoginSuccess(user) {
+      this.loggedUser = user;
+      this.showLogin = false;
     }
   }
 }

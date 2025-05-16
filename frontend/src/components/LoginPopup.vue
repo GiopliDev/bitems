@@ -21,14 +21,23 @@
 
 <script setup>
 import { ref } from 'vue'
-const emit = defineEmits(['close', 'switchToRegister'])
+import usersData from '../jsons/users.json'
+const emit = defineEmits(['close', 'switchToRegister', 'login-success'])
 const username = ref('')
 const password = ref('')
+const users = ref(usersData)
 function close() { emit('close') }
 function switchToRegister() { emit('switchToRegister') }
 function onSubmit() {
-  // Qui in futuro la logica di login
-  alert('Login submit (demo)')
+  const user = users.value.find(u => u.username === username.value && u.password === password.value)
+  if (user) {
+    alert('Login effettuato! Benvenuto ' + user.username)
+    emit('login-success', user)
+    emit('close')
+    // Qui in futuro: salva lo stato utente loggato globalmente
+  } else {
+    alert('Username o password errati!')
+  }
 }
 </script>
 

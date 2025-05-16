@@ -11,17 +11,27 @@
         <a href="#" class="nav-link">Oggetti Virtuali</a>
         <a href="#" class="nav-link">Top Vendite</a>
       </nav>
-      <div class="auth-links">
+      <div v-if="user" class="user-info-bar">
+        Hi {{ user.username }}!<br>
+        Balance: {{ user.balance.toFixed(2) }}$
+      </div>
+      <div class="auth-links" v-else>
         <a href="#" class="auth-btn login-btn" @click.prevent="$emit('show-login')">Accedi</a>
         <a href="#" class="auth-btn register-btn" @click.prevent="$emit('show-register')">Registrati</a>
       </div>
     </div>
   </header>
+  <UserSidebar v-if="user"/>
 </template>
 
 <script>
+import UserSidebar from './UserSidebar.vue';
+
 export default {
-  name: 'Navbar'
+  name: 'Navbar',
+  props: {
+    user: Object
+  }
 }
 </script>
 
@@ -132,6 +142,14 @@ header {
 .register-btn:hover {
   background-color: var(--primary-light);
   box-shadow: 0 2px 8px rgba(187, 134, 252, 0.4);
+}
+
+.user-info-bar {
+  color: var(--on-surface);
+  font-size: 1rem;
+  text-align: right;
+  font-weight: 500;
+  margin-left: 1rem;
 }
 
 @media (max-width: 768px) {
