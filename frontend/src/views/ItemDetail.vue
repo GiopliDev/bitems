@@ -20,7 +20,7 @@
       <div class="item-desc-box">
         <p class="item-desc">" {{ item.description }} "</p>
       </div>
-      <!-- General Like/Dislike Counter -->
+      <!-- DA METTERCI LE ICONE USANDO PNG O SVG -->
       <div class="item-general-actions" style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.2rem;">
         <span class="like" style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
           <i class="fa-regular fa-thumbs-up"></i> {{ generalLikes }}
@@ -28,6 +28,7 @@
         <span class="dislike" style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
           <i class="fa-regular fa-thumbs-down"></i> {{ generalDislikes }}
         </span>
+        <span class="bookmark" style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;"><img src="../assets/icons/mark.png" alt="bookmark" style="width: 30px; height: 30px;"/>Bookmark</span>
       </div>
       <div class="item-reviews">
         <h3>Recensioni</h3>
@@ -101,6 +102,7 @@ const orderQty = ref(1)
 const currentImage = ref('')
 const showPaymentPopup = ref(false)
 
+//FETCH CON LE REVIEWS
 const user = { rep: 12 }
 const reviews = [
   { id: 1, user: 'UserA', date: '2024-06-01', text: 'Ottimo venditore!' },

@@ -6,7 +6,7 @@
     </div>
     <nav class="sidebar-menu">
       <router-link to="/profile" class="sidebar-link" active-class="active">Profile</router-link>
-      <router-link to="/add-item" class="sidebar-link" active-class="active">Add Item</router-link>
+      <router-link to="/addItem" class="sidebar-link" active-class="active">Add Item</router-link>
       <router-link to="/history" class="sidebar-link" active-class="active">See History</router-link>
       <router-link to="/chats" class="sidebar-link" active-class="active">Chats</router-link>
       <router-link to="/bookmarks" class="sidebar-link" active-class="active">Bookmarks</router-link>

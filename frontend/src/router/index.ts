@@ -27,6 +27,21 @@ const router = createRouter({
       name: 'itemDetail',
       component: () => import('../views/ItemDetail.vue'),
     },
+    {
+      path: '/chats',
+      name: 'chats',
+      component: () => import('../views/ChatsView.vue'),
+    },
+    {
+      path: '/addItem',
+      name: 'addItem',
+      component: () => import('../views/addItemView.vue'),
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('../views/ProfileView.vue'),
+    },
   ],
 })
 

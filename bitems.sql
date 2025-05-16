@@ -1,14 +1,13 @@
 -- phpMyAdmin SQL Dump
--- version 5.1.1
--- https://www.phpmyadmin.net/
+-- version 4.5.1
+-- http://www.phpmyadmin.net
 --
 -- Host: 127.0.0.1
--- Creato il: Mag 09, 2025 alle 12:51
--- Versione del server: 10.4.21-MariaDB
--- Versione PHP: 7.3.31
+-- Generation Time: May 16, 2025 at 01:12 PM
+-- Server version: 10.1.16-MariaDB
+-- PHP Version: 5.5.38
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-START TRANSACTION;
 SET time_zone = "+00:00";
 
 
@@ -24,15 +23,16 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `articoli`
+-- Table structure for table `articoli`
 --
 
 CREATE TABLE `articoli` (
   `art_id` int(11) NOT NULL,
   `art_titolo` varchar(50) NOT NULL,
-  `art_qtaDisp` int(11) NOT NULL DEFAULT 1,
+  `art_qtaDisp` int(11) NOT NULL DEFAULT '1',
   `art_prezzoUnitario` float NOT NULL,
   `art_descrizione` varchar(500) NOT NULL,
+  `art_timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `art_status` enum('D','E','N') NOT NULL COMMENT 'disponibile,esaurito,non visibile',
   `art_tip_id` int(11) NOT NULL,
   `art_ute_id` int(11) NOT NULL,
@@ -40,16 +40,29 @@ CREATE TABLE `articoli` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
--- Dump dei dati per la tabella `articoli`
+-- Dumping data for table `articoli`
 --
 
-INSERT INTO `articoli` (`art_id`, `art_titolo`, `art_qtaDisp`, `art_prezzoUnitario`, `art_descrizione`, `art_status`, `art_tip_id`, `art_ute_id`, `art_gio_id`) VALUES
-(1, 'Easter Egg Launcher LVL 144', 10, 0.5, 'The special weapon added in the latest STW update.', 'D', 1, 1, 1);
+INSERT INTO `articoli` (`art_id`, `art_titolo`, `art_qtaDisp`, `art_prezzoUnitario`, `art_descrizione`, `art_timestamp`, `art_status`, `art_tip_id`, `art_ute_id`, `art_gio_id`) VALUES
+(1, 'Easter Egg Launcher LVL 144', 10, 0.5, 'The special weapon added in the latest STW update.', '2025-05-16 09:46:30', 'D', 1, 1, 1);
 
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `cronologiaacquisti`
+-- Table structure for table `chats`
+--
+
+CREATE TABLE `chats` (
+  `cht_id` int(11) NOT NULL,
+  `cht_creationDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `cht_ute_id1` int(11) NOT NULL,
+  `cht_ute_id2` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `cronologiaacquisti`
 --
 
 CREATE TABLE `cronologiaacquisti` (
@@ -64,7 +77,7 @@ CREATE TABLE `cronologiaacquisti` (
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `giochiaffiliati`
+-- Table structure for table `giochiaffiliati`
 --
 
 CREATE TABLE `giochiaffiliati` (
@@ -73,7 +86,7 @@ CREATE TABLE `giochiaffiliati` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
--- Dump dei dati per la tabella `giochiaffiliati`
+-- Dumping data for table `giochiaffiliati`
 --
 
 INSERT INTO `giochiaffiliati` (`gio_id`, `gio_nome`) VALUES
@@ -86,10 +99,24 @@ INSERT INTO `giochiaffiliati` (`gio_id`, `gio_nome`) VALUES
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `recensione`
+-- Table structure for table `messaggi`
 --
 
-CREATE TABLE `recensione` (
+CREATE TABLE `messaggi` (
+  `mes_id` int(11) NOT NULL,
+  `mes_content` varchar(255) NOT NULL,
+  `mes_timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `mes_ute_id` int(11) NOT NULL,
+  `mes_chat_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `recensioni`
+--
+
+CREATE TABLE `recensioni` (
   `rec_id` int(11) NOT NULL,
   `rec_art_id` int(11) NOT NULL,
   `rec_ute_id` int(11) NOT NULL,
@@ -100,7 +127,7 @@ CREATE TABLE `recensione` (
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `segnalibri`
+-- Table structure for table `segnalibri`
 --
 
 CREATE TABLE `segnalibri` (
@@ -112,7 +139,7 @@ CREATE TABLE `segnalibri` (
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `tags`
+-- Table structure for table `tags`
 --
 
 CREATE TABLE `tags` (
@@ -121,7 +148,7 @@ CREATE TABLE `tags` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
--- Dump dei dati per la tabella `tags`
+-- Dumping data for table `tags`
 --
 
 INSERT INTO `tags` (`tag_id`, `tag_nome`) VALUES
@@ -131,7 +158,7 @@ INSERT INTO `tags` (`tag_id`, `tag_nome`) VALUES
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `tags_articoli`
+-- Table structure for table `tags_articoli`
 --
 
 CREATE TABLE `tags_articoli` (
@@ -140,7 +167,7 @@ CREATE TABLE `tags_articoli` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
--- Dump dei dati per la tabella `tags_articoli`
+-- Dumping data for table `tags_articoli`
 --
 
 INSERT INTO `tags_articoli` (`art_id`, `tag_id`) VALUES
@@ -150,7 +177,7 @@ INSERT INTO `tags_articoli` (`art_id`, `tag_id`) VALUES
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `tipologie`
+-- Table structure for table `tipologie`
 --
 
 CREATE TABLE `tipologie` (
@@ -159,7 +186,7 @@ CREATE TABLE `tipologie` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
--- Dump dei dati per la tabella `tipologie`
+-- Dumping data for table `tipologie`
 --
 
 INSERT INTO `tipologie` (`tip_id`, `tip_nome`) VALUES
@@ -172,7 +199,7 @@ INSERT INTO `tipologie` (`tip_id`, `tip_nome`) VALUES
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `utenti`
+-- Table structure for table `utenti`
 --
 
 CREATE TABLE `utenti` (
@@ -181,23 +208,23 @@ CREATE TABLE `utenti` (
   `ute_cognome` varchar(50) NOT NULL,
   `ute_username` varchar(25) NOT NULL,
   `ute_email` varchar(60) NOT NULL,
-  `ute_rep` int(11) NOT NULL DEFAULT 0,
-  `ute_saldo` float NOT NULL DEFAULT 0
+  `ute_rep` int(11) NOT NULL DEFAULT '0',
+  `ute_saldo` float NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
--- Dump dei dati per la tabella `utenti`
+-- Dumping data for table `utenti`
 --
 
 INSERT INTO `utenti` (`ute_id`, `ute_nome`, `ute_cognome`, `ute_username`, `ute_email`, `ute_rep`, `ute_saldo`) VALUES
 (1, 'Gabriele', 'Bondoni', 'Giopli', '', 78, 0);
 
 --
--- Indici per le tabelle scaricate
+-- Indexes for dumped tables
 --
 
 --
--- Indici per le tabelle `articoli`
+-- Indexes for table `articoli`
 --
 ALTER TABLE `articoli`
   ADD PRIMARY KEY (`art_id`),
@@ -206,7 +233,15 @@ ALTER TABLE `articoli`
   ADD KEY `art_ute_id` (`art_ute_id`);
 
 --
--- Indici per le tabelle `cronologiaacquisti`
+-- Indexes for table `chats`
+--
+ALTER TABLE `chats`
+  ADD PRIMARY KEY (`cht_id`),
+  ADD KEY `cht_ute_id2` (`cht_ute_id2`),
+  ADD KEY `cht_ute_id1` (`cht_ute_id1`);
+
+--
+-- Indexes for table `cronologiaacquisti`
 --
 ALTER TABLE `cronologiaacquisti`
   ADD PRIMARY KEY (`cro_id`),
@@ -215,21 +250,29 @@ ALTER TABLE `cronologiaacquisti`
   ADD KEY `cro_ute_id` (`cro_ute_id`);
 
 --
--- Indici per le tabelle `giochiaffiliati`
+-- Indexes for table `giochiaffiliati`
 --
 ALTER TABLE `giochiaffiliati`
   ADD PRIMARY KEY (`gio_id`);
 
 --
--- Indici per le tabelle `recensione`
+-- Indexes for table `messaggi`
 --
-ALTER TABLE `recensione`
+ALTER TABLE `messaggi`
+  ADD PRIMARY KEY (`mes_id`),
+  ADD KEY `mes_chat_id` (`mes_chat_id`),
+  ADD KEY `mes_ute_id` (`mes_ute_id`);
+
+--
+-- Indexes for table `recensioni`
+--
+ALTER TABLE `recensioni`
   ADD PRIMARY KEY (`rec_id`),
   ADD KEY `rec_art_id` (`rec_art_id`),
   ADD KEY `rec_ute_id` (`rec_ute_id`);
 
 --
--- Indici per le tabelle `segnalibri`
+-- Indexes for table `segnalibri`
 --
 ALTER TABLE `segnalibri`
   ADD PRIMARY KEY (`seg_id`),
@@ -237,88 +280,90 @@ ALTER TABLE `segnalibri`
   ADD KEY `seg_ute_id` (`seg_ute_id`);
 
 --
--- Indici per le tabelle `tags`
+-- Indexes for table `tags`
 --
 ALTER TABLE `tags`
   ADD PRIMARY KEY (`tag_id`);
 
 --
--- Indici per le tabelle `tags_articoli`
+-- Indexes for table `tags_articoli`
 --
 ALTER TABLE `tags_articoli`
   ADD KEY `tagarticoli_art_id` (`art_id`),
   ADD KEY `tagarticoli_tag_id` (`tag_id`);
 
 --
--- Indici per le tabelle `tipologie`
+-- Indexes for table `tipologie`
 --
 ALTER TABLE `tipologie`
   ADD PRIMARY KEY (`tip_id`);
 
 --
--- Indici per le tabelle `utenti`
+-- Indexes for table `utenti`
 --
 ALTER TABLE `utenti`
   ADD PRIMARY KEY (`ute_id`);
 
 --
--- AUTO_INCREMENT per le tabelle scaricate
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT per la tabella `articoli`
+-- AUTO_INCREMENT for table `articoli`
 --
 ALTER TABLE `articoli`
   MODIFY `art_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
 --
--- AUTO_INCREMENT per la tabella `cronologiaacquisti`
+-- AUTO_INCREMENT for table `chats`
+--
+ALTER TABLE `chats`
+  MODIFY `cht_id` int(11) NOT NULL AUTO_INCREMENT;
+--
+-- AUTO_INCREMENT for table `cronologiaacquisti`
 --
 ALTER TABLE `cronologiaacquisti`
   MODIFY `cro_id` int(11) NOT NULL AUTO_INCREMENT;
-
 --
--- AUTO_INCREMENT per la tabella `giochiaffiliati`
+-- AUTO_INCREMENT for table `giochiaffiliati`
 --
 ALTER TABLE `giochiaffiliati`
   MODIFY `gio_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
-
 --
--- AUTO_INCREMENT per la tabella `recensione`
+-- AUTO_INCREMENT for table `messaggi`
 --
-ALTER TABLE `recensione`
+ALTER TABLE `messaggi`
+  MODIFY `mes_id` int(11) NOT NULL AUTO_INCREMENT;
+--
+-- AUTO_INCREMENT for table `recensioni`
+--
+ALTER TABLE `recensioni`
   MODIFY `rec_id` int(11) NOT NULL AUTO_INCREMENT;
-
 --
--- AUTO_INCREMENT per la tabella `segnalibri`
+-- AUTO_INCREMENT for table `segnalibri`
 --
 ALTER TABLE `segnalibri`
   MODIFY `seg_id` int(11) NOT NULL AUTO_INCREMENT;
-
 --
--- AUTO_INCREMENT per la tabella `tags`
+-- AUTO_INCREMENT for table `tags`
 --
 ALTER TABLE `tags`
   MODIFY `tag_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
 --
--- AUTO_INCREMENT per la tabella `tipologie`
+-- AUTO_INCREMENT for table `tipologie`
 --
 ALTER TABLE `tipologie`
   MODIFY `tip_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
-
 --
--- AUTO_INCREMENT per la tabella `utenti`
+-- AUTO_INCREMENT for table `utenti`
 --
 ALTER TABLE `utenti`
-  MODIFY `ute_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `ute_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+--
+-- Constraints for dumped tables
+--
 
 --
--- Limiti per le tabelle scaricate
---
-
---
--- Limiti per la tabella `articoli`
+-- Constraints for table `articoli`
 --
 ALTER TABLE `articoli`
   ADD CONSTRAINT `art_gio_id` FOREIGN KEY (`art_gio_id`) REFERENCES `giochiaffiliati` (`gio_id`),
@@ -326,34 +371,40 @@ ALTER TABLE `articoli`
   ADD CONSTRAINT `art_ute_id` FOREIGN KEY (`art_ute_id`) REFERENCES `utenti` (`ute_id`);
 
 --
--- Limiti per la tabella `cronologiaacquisti`
+-- Constraints for table `chats`
+--
+ALTER TABLE `chats`
+  ADD CONSTRAINT `chat_ute_id1` FOREIGN KEY (`cht_ute_id1`) REFERENCES `utenti` (`ute_id`),
+  ADD CONSTRAINT `chat_ute_id2` FOREIGN KEY (`cht_ute_id2`) REFERENCES `utenti` (`ute_id`);
+
+--
+-- Constraints for table `cronologiaacquisti`
 --
 ALTER TABLE `cronologiaacquisti`
   ADD CONSTRAINT `cro_art_id` FOREIGN KEY (`cro_art_id`) REFERENCES `articoli` (`art_id`),
-  ADD CONSTRAINT `cro_rec_id` FOREIGN KEY (`cro_rec_id`) REFERENCES `recensione` (`rec_id`),
+  ADD CONSTRAINT `cro_rec_id` FOREIGN KEY (`cro_rec_id`) REFERENCES `recensioni` (`rec_id`),
   ADD CONSTRAINT `cro_ute_id` FOREIGN KEY (`cro_ute_id`) REFERENCES `utenti` (`ute_id`);
 
 --
--- Limiti per la tabella `recensione`
+-- Constraints for table `recensioni`
 --
-ALTER TABLE `recensione`
+ALTER TABLE `recensioni`
   ADD CONSTRAINT `rec_art_id` FOREIGN KEY (`rec_art_id`) REFERENCES `articoli` (`art_id`),
   ADD CONSTRAINT `rec_ute_id` FOREIGN KEY (`rec_ute_id`) REFERENCES `utenti` (`ute_id`);
 
 --
--- Limiti per la tabella `segnalibri`
+-- Constraints for table `segnalibri`
 --
 ALTER TABLE `segnalibri`
   ADD CONSTRAINT `seg_art_id` FOREIGN KEY (`seg_art_id`) REFERENCES `articoli` (`art_id`),
   ADD CONSTRAINT `seg_ute_id` FOREIGN KEY (`seg_ute_id`) REFERENCES `utenti` (`ute_id`);
 
 --
--- Limiti per la tabella `tags_articoli`
+-- Constraints for table `tags_articoli`
 --
 ALTER TABLE `tags_articoli`
   ADD CONSTRAINT `tagarticoli_art_id` FOREIGN KEY (`art_id`) REFERENCES `articoli` (`art_id`),
   ADD CONSTRAINT `tagarticoli_tag_id` FOREIGN KEY (`tag_id`) REFERENCES `tags` (`tag_id`);
-COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
