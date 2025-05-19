@@ -25,6 +25,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import axios from 'axios';
 const emit = defineEmits(['close', 'switchToLogin'])
 const nome = ref('')
 const cognome = ref('')
@@ -33,11 +34,20 @@ const password = ref('')
 function close() { emit('close') }
 function switchToLogin() { emit('switchToLogin') }
 function onSubmit() {
-  // Qui in futuro la logica di registrazione
-  alert('Register submit (demo)')
+  axios.post('http://localhost/path/to/backend/api.php', {
+    nome: nome.value,
+    cognome: cognome.value,
+    email: email.value,
+    password: password.value
+  })
+    .then(response => {
+      console.log(response.data);
+    })
+    .catch(error => {
+      console.error(error);
+    });
 }
 </script>
-
 <style scoped>
 .popup-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.6);
