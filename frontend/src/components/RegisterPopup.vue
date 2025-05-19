@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref } from 'vue';
 import axios from 'axios';
 const emit = defineEmits(['close', 'switchToLogin'])
 const nome = ref('')
@@ -34,18 +34,12 @@ const password = ref('')
 function close() { emit('close') }
 function switchToLogin() { emit('switchToLogin') }
 function onSubmit() {
-  axios.post('http://localhost/path/to/backend/api.php', {
+  axios.post('http://localhost/backend/register.php', {
     nome: nome.value,
     cognome: cognome.value,
     email: email.value,
     password: password.value
   })
-    .then(response => {
-      console.log(response.data);
-    })
-    .catch(error => {
-      console.error(error);
-    });
 }
 </script>
 <style scoped>
