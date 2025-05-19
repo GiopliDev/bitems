@@ -27,39 +27,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import ItemCard from '../components/ItemCard.vue'
 import FilterBar from '../components/FilterBar.vue'
-import itemsData from '../jsons/items.json'
+import axios from '@/config/axios'
 
-// Tipi TypeScript per un item
-interface Item {
-  id: number
-  itemName: string
-  price: number
-  qty: number
-  tags: string[]
-  user: string
-  description: string
-  images: string[]
-  gameName: string
-  isHot: boolean
-  createdAt: string
-}
+//get catalogo principale se non c'è una query sull url
+//se gameName = ? mostro tutti gli oggetti di quella sezione
 
-// In futuro: qui potrai sostituire con una fetch API
-const allItems = ref<Item[]>(itemsData as Item[])
+const catalogo = ref<Record<string, any[]>>({})
+const hotItems = ref<any[]>([])
+const recentItems = ref<any[]>([])
+const itemsByGame = ref<Record<string, any[]>>({})
 
-const hotItems = computed(() => allItems.value.filter(i => i.isHot).slice(0, 4))
-const recentItems = computed(() => [...allItems.value].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 4))
-const itemsByGame = computed(() => {
-  const grouped: Record<string, Item[]> = {}
-  allItems.value.forEach(item => {
-    if (!grouped[item.gameName]) grouped[item.gameName] = []
-    grouped[item.gameName].push(item)
+onMounted(() => {
+  axios.get('frontend/backend/getCatalogo.php').then((response: { data: any }) => {
+    //qui vengono costruite le card
+    catalogo.value = response.data.data
+    itemsByGame.value = response.data.data
+    console.log('Catalogo:', catalogo.value)
   })
-  return grouped
 })
+
 </script>
 
 <style scoped>

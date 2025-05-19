@@ -12,6 +12,11 @@
       <div class="item-tags">
         <span v-for="tag in item.tags" :key="tag" class="item-tag">#{{ tag }}</span>
       </div>
+      <!-- item status -->
+      <div class="item-status">
+        <span style="color: green;" v-if="item.status === 'D'" class="item-tag">Available</span> <!-- colore verde acceso -->
+        <span style="color: red;" v-if="item.status === 'E'" class="item-tag">Out of stock</span> <!-- colore rosso -->
+      </div>
       <div class="item-footer">
         <span class="item-user"><i class="fa-regular fa-user"></i> {{ item.user }}</span>
         <span class="item-qty">Qta: {{ item.qty }}</span>

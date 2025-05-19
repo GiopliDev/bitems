@@ -28,20 +28,26 @@
   </aside>
 </template>
 
+//DA FARE:
+//filtri per tag
+//checkbo per solo quelli Available
+
 <script setup>
 import { reactive, ref } from 'vue'
 const filters = reactive({
   game: '',
   category: '',
   minPrice: 0,
-  maxPrice: 2000
+  maxPrice: 2000,
+  onlyAvailable: false,
+  tags: []
 })
-const games = [
+const games = [ //da backend
   'Valorant',
   'League of Legends',
   'CS:GO'
 ]
-const categories = [
+const categories = [ //da backend
   'Cosmetica',
   'Ingame Items',
   'Boosting',

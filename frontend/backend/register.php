@@ -1,4 +1,8 @@
 <?php
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+
 //registrazione utente
 
 include 'connection.php';
@@ -10,9 +14,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST'){
     $cognome = $_POST['cognome'];
     $email = $_POST['email'];
     $password = $_POST['password'];
-
-    $check_email = "SELECT * FROM users WHERE email = ?";
-    $check_username = "SELECT * FROM users WHERE username = ?";
+    $username = $_POST['username'];
+    $check_email = "SELECT * FROM utenti WHERE email = ?";
+    $check_username = "SELECT * FROM utenti WHERE username = ?";
 
     $stmt = $conn->prepare($check_email);
     $stmt->bind_param('s', $email);
@@ -33,8 +37,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST'){
     }else if(mysqli_num_rows($result_username) > 0){
         echo json_encode(['error' => 'Username già esistente', 'code' => 2]); //codice 2 per username già esistente
     }else{
-        $sql = "INSERT INTO users (nome, cognome, email, password) VALUES ('$nome', '$cognome', '$email', '$password')";
+        $sql = "INSERT INTO utenti (ute_nome, ute_cognome, ute_email, ute_password, ute_username) VALUES ('$nome', '$cognome', '$email', '$password', '$username')";
         $result = mysqli_query($conn, $sql);
+        return json_encode(['success' => 'Utente registrato con successo', 'code' => 0]); //codice 0 per utente registrato con successo
     }
 }
 
