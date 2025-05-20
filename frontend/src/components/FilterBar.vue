@@ -16,6 +16,44 @@
       </select>
     </div>
     <div class="filter-group">
+      <label for="availabilityCheckBox">Solo Disponibili:</label>
+      <input type="checkbox" id="availabilityCheckBox" v-model="filters.onlyAvailable" />
+    </div>
+    <div class="filter-group">
+      <label for="tags">Tag:</label>
+      <div v-if="createTagButton" class="create-tag-button">
+        <button @click="createTag">Crea Tag</button>
+      </div>
+      <div class="tag-input-container">
+        <input 
+          type="text" 
+          id="tags" 
+          v-model="tagSearch" 
+          placeholder="Inserisci tag (min 3 caratteri)" 
+        />
+        <div v-if="showTagSuggestions" class="tag-suggestions">
+          <div 
+            v-for="tag in tagSuggestions" 
+            :key="tag"
+            class="tag-suggestion"
+            @click="addTag(tag)"
+          >
+            {{ tag }}
+          </div>
+        </div>
+      </div>
+      <div class="selected-tags">
+        <span 
+          v-for="tag in filters.tags" 
+          :key="tag" 
+          class="selected-tag"
+        >
+          {{ tag }}
+          <button @click="removeTag(tag)" class="remove-tag">&times;</button>
+        </span>
+      </div>
+    </div>
+    <div class="filter-group">
       <label>Prezzo:</label>
       <div class="price-inputs">
         <input type="number" min="0" max="2000" step="1" v-model.number="filters.minPrice" placeholder="Min €" />
@@ -32,9 +70,22 @@
 //filtri per tag
 //checkbo per solo quelli Available
 
-<script setup>
-import { reactive, ref } from 'vue'
-const filters = reactive({
+<script setup lang="ts">
+import { reactive, ref, watch, onMounted } from 'vue'
+import axios from '@/config/axios'
+
+const emit = defineEmits<{
+  (e: 'filters-applied', data: any[]): void
+}>()
+
+const filters = reactive<{
+  game: string;
+  category: string;
+  minPrice: number;
+  maxPrice: number;
+  onlyAvailable: boolean;
+  tags: string[];
+}>({
   game: '',
   category: '',
   minPrice: 0,
@@ -42,27 +93,102 @@ const filters = reactive({
   onlyAvailable: false,
   tags: []
 })
-const games = [ //da backend
-  'Valorant',
-  'League of Legends',
-  'CS:GO'
-]
-const categories = [ //da backend
-  'Cosmetica',
-  'Ingame Items',
-  'Boosting',
-  'Account',
-  'Skin'
-]
-function apply() {
-  // In futuro: emetti evento con i filtri
-  alert('Applica filtri (demo)')
+
+const games = ref<string[]>([])
+const categories = ref<string[]>([])
+const tagSearch = ref('')
+const tagSuggestions = ref<string[]>([])
+const showTagSuggestions = ref(false)
+const createTagButton = ref(false)
+// Load games and categories on mount
+onMounted(async () => {
+  try {
+    const gamesRes = await axios.get('frontend/backend/getCatalogo.php', { params: { action: 'getGames' } })
+    const categoriesRes = await axios.get('frontend/backend/getCatalogo.php', { params: { action: 'getCategories' } })
+    games.value = gamesRes.data
+    categories.value = categoriesRes.data
+  } catch (error) {
+    console.error('Error loading filter data:', error)
+  }
+})
+
+// watch ha la stessa funzione di observable su angular 
+watch(tagSearch, async (newValue) => {
+  if (newValue.length >= 3) {
+    const response = await axios.get('frontend/backend/getCatalogo.php', {
+      params: { 
+        action: 'searchTags',
+        query: newValue
+      }
+    })
+    
+    if (response.data.code === 0) {
+      createTagButton.value = true
+      showTagSuggestions.value = false
+    } else {
+      tagSuggestions.value = response.data
+      showTagSuggestions.value = true
+      createTagButton.value = false
+    }
+  } else {
+    showTagSuggestions.value = false
+    tagSuggestions.value = []
+    createTagButton.value = false
+  }
+})
+ 
+function addTag(tag: string) {
+  if (!filters.tags.includes(tag)) {
+    filters.tags.push(tag)
+  }
+  tagSearch.value = ''
+  showTagSuggestions.value = false
 }
+
+async function createTag() {
+  const response = await axios.get('frontend/backend/getCatalogo.php', {
+    params: {
+      action: 'createTag',
+      tag: tagSearch.value
+    }
+  })
+}
+function removeTag(tag: string) {
+  filters.tags = filters.tags.filter(t => t !== tag)
+}
+
+
+//NOTA BENE: se viene composto l url con i parametri e poi viene aggiornata la pagina non funziona,va fatta una richiesta con axios e poi popolare con le card
+async function apply() {
+  try {
+    const response = await axios.get('frontend/backend/getCatalogo.php', {
+      params: {
+        action: 'getCatalogoFiltrato',
+        gameName: filters.game,
+        category: filters.category,
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+        onlyAvailable: filters.onlyAvailable,
+        tags: filters.tags.join(',')
+      }
+    })
+    
+    // Emetti l'evento con i dati filtrati
+    emit('filters-applied', response.data.data)
+  } catch (error) {
+    console.error('Error applying filters:', error)
+  }
+}
+
 function reset() {
   filters.game = ''
   filters.category = ''
   filters.minPrice = 0
   filters.maxPrice = 2000
+  filters.onlyAvailable = false
+  filters.tags = []
+  tagSearch.value = ''
+  showTagSuggestions.value = false
 }
 </script>
 
@@ -70,6 +196,7 @@ function reset() {
 .filter-bar {
   position: sticky;
   top: 0;
+  right: 0;
   height: 100vh;
   background: var(--surface);
   color: var(--on-surface);
@@ -150,6 +277,64 @@ select:focus, input[type="number"]:focus {
 }
 .main-btn.outline:hover {
   background: #222;
+  color: var(--secondary);
+}
+
+.tag-input-container {
+  position: relative;
+}
+
+.tag-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--primary-light);
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.tag-suggestion {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.tag-suggestion:hover {
+  background: var(--surface-light);
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.selected-tag {
+  background: var(--primary-light);
+  color: var(--on-primary);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.remove-tag {
+  background: none;
+  border: none;
+  color: var(--on-primary);
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.remove-tag:hover {
   color: var(--secondary);
 }
 </style> 

@@ -22,7 +22,7 @@
         </div>
       </section>
     </div>
-    <FilterBar />
+    <FilterBar @filters-applied="handleFiltersApplied" />
   </div>
 </template>
 
@@ -32,23 +32,23 @@ import ItemCard from '../components/ItemCard.vue'
 import FilterBar from '../components/FilterBar.vue'
 import axios from '@/config/axios'
 
-//get catalogo principale se non c'è una query sull url
-//se gameName = ? mostro tutti gli oggetti di quella sezione
-
 const catalogo = ref<Record<string, any[]>>({})
 const hotItems = ref<any[]>([])
 const recentItems = ref<any[]>([])
 const itemsByGame = ref<Record<string, any[]>>({})
 
+function handleFiltersApplied(filteredData: any[]) {
+  // Aggiorna i dati visualizzati con i risultati filtrati
+  itemsByGame.value = { 'Risultati Filtro': filteredData }
+}
+
 onMounted(() => {
-  axios.get('frontend/backend/getCatalogo.php').then((response: { data: any }) => {
-    //qui vengono costruite le card
+  axios.get('frontend/backend/getCatalogo.php',{params: {action: 'getCatalogoDivisoInSezioni'}}).then((response: { data: any }) => {
     catalogo.value = response.data.data
     itemsByGame.value = response.data.data
     console.log('Catalogo:', catalogo.value)
   })
 })
-
 </script>
 
 <style scoped>

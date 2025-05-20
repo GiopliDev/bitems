@@ -45,7 +45,35 @@
       <div class="form-row">
         <label for="tags">Tags</label>
         <div class="tags-input-row">
-          <input id="tags" v-model="tagInput" @keydown.enter.prevent="addTag" type="text" placeholder="Aggiungi un tag e premi Invio" />
+          <div class="combobox-container">
+            <input 
+              id="tags" 
+              v-model="tagInput"
+              type="text"
+              placeholder="Cerca o crea un nuovo tag"
+              @input="onTagInput"
+              @keydown.enter.prevent="onTagEnter"
+              @keydown.tab.prevent="onTagEnter"
+              @blur="onTagBlur"
+            />
+            <div v-if="showTagSuggestions" class="tag-suggestions">
+              <div 
+                v-for="tag in tagSuggestions" 
+                :key="tag"
+                class="tag-suggestion"
+                @mousedown.prevent="addTag(tag)"
+              >
+                {{ tag }}
+              </div>
+              <div 
+                v-if="createTagButton" 
+                class="tag-suggestion create-tag-suggestion"
+                @mousedown.prevent="createTag"
+              >
+                Crea tag: "{{ tagInput }}"
+              </div>
+            </div>
+          </div>
         </div>
         <div class="tags-list">
           <span v-for="(tag, idx) in form.tags" :key="tag" class="tag-chip">
@@ -66,60 +94,191 @@
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
-const games = [
-  'Fortnite',
-  'Minecraft',
-  'CS:GO',
-  'Path Of Exile 2',
-  'League of Legends',
-  'Valorant',
-]
-const categories = [
-  'Cosmetic',
-  'Boosting',
-  'Accounts',
-  'In Game Items',
-  'Non specificato'
-]
-const form = ref({
+<script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
+import axios from '@/config/axios'
+
+interface FormData {
+  title: string;
+  game: string;
+  otherGame: string;
+  description: string;
+  qty: number;
+  price: number;
+  images: Array<{file: File; url: string}>;
+  category: string;
+  tags: string[];
+  status: string;
+}
+
+const games = ref<string[]>([])
+const categories = ref<string[]>([])
+const tagInput = ref('')
+const tagSuggestions = ref<string[]>([])
+const showTagSuggestions = ref(false)
+const createTagButton = ref(false)
+
+const form = ref<FormData>({
   title: '',
-  game: games[0],
+  game: '',
   otherGame: '',
+  description: '',
   qty: 1,
   price: 0.01,
-  images: [], // {file, url}
-  category: categories[0],
+  images: [],
+  category: '',
   tags: [],
   status: 'disponibile'
 })
-const tagInput = ref('')
-function addTag() {
-  const val = tagInput.value.trim()
+
+// Carica games e categories al mount
+onMounted(async () => {
+  try {
+    const gamesRes = await axios.get('frontend/backend/getCatalogo.php', { params: { action: 'getGames' } })
+    const categoriesRes = await axios.get('frontend/backend/getCatalogo.php', { params: { action: 'getCategories' } })
+    
+    if (gamesRes.data && Array.isArray(gamesRes.data)) {
+      games.value = gamesRes.data
+      form.value.game = games.value[0] || ''
+    }
+    
+    if (categoriesRes.data && Array.isArray(categoriesRes.data)) {
+      categories.value = categoriesRes.data
+      form.value.category = categories.value[0] || ''
+    }
+  } catch (error) {
+    console.error('Error loading data:', error)
+  }
+})
+
+// Watch per la ricerca dei tag
+watch(tagInput, async (newValue) => {
+  if (newValue.length >= 3) {
+    try {
+      const response = await axios.get('frontend/backend/getCatalogo.php', {
+        params: { 
+          action: 'searchTags',
+          query: newValue
+        }
+      })
+      
+      if (response.data.code === 0) {
+        createTagButton.value = true
+        showTagSuggestions.value = false
+      } else {
+        tagSuggestions.value = response.data
+        showTagSuggestions.value = true
+        createTagButton.value = false
+      }
+    } catch (error) {
+      console.error('Error searching tags:', error)
+    }
+  } else {
+    showTagSuggestions.value = false
+    tagSuggestions.value = []
+    createTagButton.value = false
+  }
+})
+
+async function createTag() {
+  try {
+    await axios.get('frontend/backend/getCatalogo.php', {
+      params: {
+        action: 'createTag',
+        tag: tagInput.value
+      }
+    })
+    addTag(tagInput.value)
+    createTagButton.value = false
+  } catch (error) {
+    console.error('Error creating tag:', error)
+  }
+}
+
+function addTag(tag: string) {
+  const val = tag.trim()
   if (val && !form.value.tags.includes(val)) {
     form.value.tags.push(val)
   }
   tagInput.value = ''
+  showTagSuggestions.value = false
 }
-function removeTag(idx) {
+
+function removeTag(idx: number) {
   form.value.tags.splice(idx, 1)
 }
-function onImageChange(e) {
-  const files = Array.from(e.target.files)
+
+function onImageChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (!input.files) return
+  
+  const files = Array.from(input.files)
   for (const file of files) {
     if (form.value.images.length >= 3) break
     const url = URL.createObjectURL(file)
     form.value.images.push({ file, url })
   }
-  e.target.value = ''
+  input.value = ''
 }
-function removeImage(idx) {
+
+function removeImage(idx: number) {
   form.value.images.splice(idx, 1)
 }
+
 function onGameChange() {
   if (form.value.game !== 'Altro') form.value.otherGame = ''
 }
+
+function onTagInput() {
+  if (tagInput.value.length >= 3) {
+    searchTags()
+  } else {
+    showTagSuggestions.value = false
+    tagSuggestions.value = []
+    createTagButton.value = false
+  }
+}
+
+async function searchTags() {
+  try {
+    const response = await axios.get('frontend/backend/getCatalogo.php', {
+      params: { 
+        action: 'searchTags',
+        query: tagInput.value
+      }
+    })
+    
+    if (response.data.code === 0) {
+      createTagButton.value = true
+      showTagSuggestions.value = true
+      tagSuggestions.value = []
+    } else {
+      tagSuggestions.value = response.data
+      showTagSuggestions.value = true
+      createTagButton.value = false
+    }
+  } catch (error) {
+    console.error('Error searching tags:', error)
+  }
+}
+
+function onTagEnter() {
+  if (tagInput.value.trim()) {
+    if (createTagButton.value) {
+      createTag()
+    } else if (tagSuggestions.value.length > 0) {
+      addTag(tagSuggestions.value[0])
+    }
+  }
+}
+
+function onTagBlur() {
+  // Piccolo delay per permettere il click sui suggerimenti
+  setTimeout(() => {
+    showTagSuggestions.value = false
+  }, 200)
+}
+
 function submitItem() {
   // Qui invia i dati al backend o mostra un alert di successo
   alert('Articolo aggiunto! (demo)')
@@ -216,8 +375,14 @@ textarea {
   z-index: 2;
 }
 .tags-input-row {
+  position: relative;
   display: flex;
   gap: 0.7rem;
+  align-items: center;
+}
+.tags-input-row input {
+  flex: 1;
+  min-width: 200px;
 }
 .tags-list {
   display: flex;
@@ -259,5 +424,36 @@ textarea {
 .main-btn:hover {
   background: var(--secondary);
   color: #18181c;
+}
+.combobox-container {
+  position: relative;
+  flex: 1;
+}
+.tag-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--primary-light);
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+  margin-top: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.tag-suggestion {
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.tag-suggestion:hover {
+  background: var(--surface-light);
+}
+.create-tag-suggestion {
+  color: var(--primary-light);
+  font-style: italic;
+  border-top: 1px solid var(--primary-light);
 }
 </style> 

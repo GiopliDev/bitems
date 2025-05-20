@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.0
+-- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Creato il: Mag 19, 2025 alle 09:56
--- Versione del server: 10.4.27-MariaDB
--- Versione PHP: 8.2.0
+-- Creato il: Mag 20, 2025 alle 17:48
+-- Versione del server: 10.4.32-MariaDB
+-- Versione PHP: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -45,7 +45,8 @@ CREATE TABLE `articoli` (
 --
 
 INSERT INTO `articoli` (`art_id`, `art_titolo`, `art_qtaDisp`, `art_prezzoUnitario`, `art_descrizione`, `art_timestamp`, `art_status`, `art_tip_id`, `art_ute_id`, `art_gio_id`) VALUES
-(1, 'Easter Egg Launcher LVL 144', 10, 0.5, 'The special weapon added in the latest STW update.', '2025-05-16 09:46:30', 'D', 1, 1, 1);
+(1, 'Easter Egg Launcher LVL 144', 10, 0.5, 'The special weapon added in the latest STW update.', '2025-05-16 09:46:30', 'D', 1, 1, 1),
+(2, 'Scavafosse 144 Glitched', 35, 12, 'Scavafosse con 2 attributi uguali a livello massimo e durabilità full.', '2025-05-19 18:17:58', 'D', 1, 2, 1);
 
 -- --------------------------------------------------------
 
@@ -125,6 +126,13 @@ CREATE TABLE `recensioni` (
   `rec_dex` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dump dei dati per la tabella `recensioni`
+--
+
+INSERT INTO `recensioni` (`rec_id`, `rec_art_id`, `rec_ute_id`, `rec_voto`, `rec_dex`) VALUES
+(1, 1, 1, '1', 'Velocissimo!');
+
 -- --------------------------------------------------------
 
 --
@@ -154,7 +162,14 @@ CREATE TABLE `tags` (
 
 INSERT INTO `tags` (`tag_id`, `tag_nome`) VALUES
 (1, 'Limited Edition'),
-(2, 'Easter');
+(2, 'Easter'),
+(3, 'Christmas'),
+(4, 'cheap'),
+(5, 'golden'),
+(6, 'Limited Time'),
+(7, '2b2t'),
+(8, 'stash'),
+(9, '2012');
 
 -- --------------------------------------------------------
 
@@ -173,7 +188,8 @@ CREATE TABLE `tags_articoli` (
 
 INSERT INTO `tags_articoli` (`art_id`, `tag_id`) VALUES
 (1, 1),
-(1, 2);
+(1, 2),
+(2, 1);
 
 -- --------------------------------------------------------
 
@@ -209,6 +225,7 @@ CREATE TABLE `utenti` (
   `ute_cognome` varchar(50) NOT NULL,
   `ute_username` varchar(25) NOT NULL,
   `ute_email` varchar(60) NOT NULL,
+  `ute_password` varchar(100) NOT NULL,
   `ute_dex` varchar(500) NOT NULL DEFAULT 'Questa è la descrizione standard!',
   `ute_rep` int(11) NOT NULL DEFAULT 0,
   `ute_saldo` float NOT NULL DEFAULT 0
@@ -218,8 +235,9 @@ CREATE TABLE `utenti` (
 -- Dump dei dati per la tabella `utenti`
 --
 
-INSERT INTO `utenti` (`ute_id`, `ute_nome`, `ute_cognome`, `ute_username`, `ute_email`, `ute_dex`, `ute_rep`, `ute_saldo`) VALUES
-(1, 'Gabriele', 'Bondoni', 'Giopli', '', '', 78, 0);
+INSERT INTO `utenti` (`ute_id`, `ute_nome`, `ute_cognome`, `ute_username`, `ute_email`, `ute_password`, `ute_dex`, `ute_rep`, `ute_saldo`) VALUES
+(1, 'Gabriele', 'Bondoni', 'Giopli', '', '', '', 78, 0),
+(2, 'Tommaso', 'Colonni', 'Araton38', 'gabriele.bondoni@gmail.com', '', 'Questa è la descrizione standard!', 0, 0);
 
 --
 -- Indici per le tabelle scaricate
@@ -314,7 +332,7 @@ ALTER TABLE `utenti`
 -- AUTO_INCREMENT per la tabella `articoli`
 --
 ALTER TABLE `articoli`
-  MODIFY `art_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `art_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT per la tabella `chats`
@@ -344,7 +362,7 @@ ALTER TABLE `messaggi`
 -- AUTO_INCREMENT per la tabella `recensioni`
 --
 ALTER TABLE `recensioni`
-  MODIFY `rec_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `rec_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT per la tabella `segnalibri`
@@ -356,7 +374,7 @@ ALTER TABLE `segnalibri`
 -- AUTO_INCREMENT per la tabella `tags`
 --
 ALTER TABLE `tags`
-  MODIFY `tag_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `tag_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT per la tabella `tipologie`
@@ -368,7 +386,7 @@ ALTER TABLE `tipologie`
 -- AUTO_INCREMENT per la tabella `utenti`
 --
 ALTER TABLE `utenti`
-  MODIFY `ute_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `ute_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- Limiti per le tabelle scaricate
