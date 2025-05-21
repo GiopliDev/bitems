@@ -1,14 +1,18 @@
 <template>
   <aside class="user-sidebar">
     <div class="user-info">
-      <img :src="user?.avatar || 'https://via.placeholder.com/54'" alt="User Avatar" class="avatar">
-      <h3>{{ user?.username || 'User' }}</h3>
+      <img 
+        :src="user?.ute_img_url ? `/bitems/frontend/UploadedImages/${user.ute_img_url}` : '/default-avatar.png'" 
+        alt="User Avatar" 
+        class="avatar"
+      >
+      <h3>{{ user?.ute_username || 'User' }}</h3>
     </div>
     <nav class="sidebar-menu">
       <router-link 
         :to="{ 
           path: '/profile',
-          query: { id: user?.id }
+          query: { id: user?.ute_id }
         }" 
         class="sidebar-link" 
         active-class="active"
@@ -74,6 +78,7 @@ async function logout() {
   margin-bottom: 0.7rem;
   border: 2px solid var(--secondary, #03dac6);
   background: #23232b;
+  object-fit: cover;
 }
 .user-info h3 {
   color: #fff;

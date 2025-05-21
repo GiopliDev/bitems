@@ -14,7 +14,13 @@
       </div>
       <div class="item-slider" v-if="item.images && item.images.length > 0">
         <button class="slider-btn" @click="prevImage">&#8592;</button>
-        <img :src="currentImage" alt="item image" class="slider-img" />
+        <img 
+          :src="currentImage" 
+          alt="item image" 
+          class="slider-img" 
+          @click="showFullImage = true"
+          style="cursor: pointer;"
+        />
         <button class="slider-btn" @click="nextImage">&#8594;</button>
       </div>
       <div v-else class="no-image">
@@ -35,63 +41,28 @@
       </div>
       <div class="item-general-actions">
         <span class="like">
-          <i class="fa-regular fa-thumbs-up"></i> {{ generalLikes }}
+          👍 {{ item.likes || 0 }}
         </span>
         <span class="dislike">
-          <i class="fa-regular fa-thumbs-down"></i> {{ generalDislikes }}
+          👎 {{ item.dislikes || 0 }}
         </span>
-        <span class="bookmark">
-          <img src="../assets/icons/mark.png" alt="bookmark" style="width: 30px; height: 30px;"/>
-          Bookmark
-        </span>
+        <button class="bookmark-btn">
+          🔖 Bookmark
+        </button>
       </div>
       <div class="item-reviews">
         <h3>Recensioni</h3>
-        <div v-if="canReview" class="add-review">
-          <h4>Aggiungi una recensione</h4>
-          <div class="review-rating">
-            <button 
-              class="rating-btn" 
-              :class="{ active: reviewRating === 1 }"
-              @click="reviewRating = 1"
-            >
-              <i class="fas fa-thumbs-up"></i>
-            </button>
-            <button 
-              class="rating-btn" 
-              :class="{ active: reviewRating === 0 }"
-              @click="reviewRating = 0"
-            >
-              <i class="fas fa-thumbs-down"></i>
-            </button>
-          </div>
-          <textarea 
-            v-model="reviewDescription" 
-            placeholder="Scrivi la tua recensione..."
-            class="review-textarea"
-          ></textarea>
-          <button 
-            class="main-btn" 
-            @click="submitReview"
-            :disabled="!reviewDescription || reviewRating === null"
-          >
-            Invia Recensione
-          </button>
-        </div>
+        <AddReview 
+          v-if="canReview" 
+          :itemId="item?.art_id"
+          @review-submitted="handleReviewSubmitted"
+        />
         <div v-if="item.recensioni && item.recensioni.length > 0" class="reviews-list">
-          <div v-for="review in item.recensioni" :key="review.rec_id" class="review">
-            <div class="review-header">
-              <div class="review-user-info">
-                <span class="review-user">{{ review.ute_username }}</span>
-                <span class="review-date">{{ formatDate(review.rec_timestamp) }}</span>
-              </div>
-              <span class="review-rating" :class="{ positive: review.rec_voto, negative: !review.rec_voto }">
-                <i :class="['fas', review.rec_voto ? 'fa-thumbs-up' : 'fa-thumbs-down']"></i>
-                {{ review.rec_voto ? 'Positiva' : 'Negativa' }}
-              </span>
-            </div>
-            <div class="review-body">{{ review.rec_dex }}</div>
-          </div>
+          <Review 
+            v-for="review in item.recensioni" 
+            :key="review.rec_id" 
+            :review="review"
+          />
         </div>
         <div v-else class="no-reviews">
           <p>Nessuna recensione disponibile</p>
@@ -165,6 +136,12 @@
     :subtitle="alertSubtitle"
     @close="closeAlert"
   />
+  <ImagePopup
+    v-if="showFullImage"
+    :show="showFullImage"
+    :imageUrl="currentImage"
+    @close="showFullImage = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -174,6 +151,9 @@ import axios from '@/config/axios'
 import PaymentPopup from '../components/PaymentPopup.vue'
 import CustomAlert from '../components/CustomAlert.vue'
 import EditItemPopup from '../components/EditItemPopup.vue'
+import Review from '../components/Review.vue'
+import AddReview from '../components/AddReview.vue'
+import ImagePopup from '../components/ImagePopup.vue'
 
 interface Review {
   rec_id: number
@@ -202,6 +182,8 @@ interface Item {
   tags?: string[]
   images?: string[]
   isOwner: boolean
+  likes?: number
+  dislikes?: number
 }
 
 const route = useRoute()
@@ -214,6 +196,7 @@ const showPaymentPopup = ref(false)
 const generalLikes = ref(10)
 const generalDislikes = ref(2)
 const showEditPopup = ref(false)
+const showFullImage = ref(false)
 
 // Alert state
 const showAlert = ref(false)
@@ -312,27 +295,11 @@ function handleItemUpdate(updatedItem: Item) {
   showEditPopup.value = false
 }
 
-async function submitReview() {
-  if (!reviewDescription.value || reviewRating.value === null) return
-
-  try {
-    const response = await axios.post('/bitems/frontend/backend/addReview.php', {
-      itemId: item.value?.art_id,
-      rating: reviewRating.value,
-      description: reviewDescription.value
-    })
-
-    if (response.data.success) {
-      // Reload item data to show new review
-      const itemResponse = await axios.get(`bitems/frontend/backend/getItem.php?id=${route.query.id}`)
-      item.value = itemResponse.data.item
-      canReview.value = false
-      reviewRating.value = null
-      reviewDescription.value = ''
-    }
-  } catch (error) {
-    console.error('Error submitting review:', error)
-  }
+async function handleReviewSubmitted() {
+  // Reload item data to show new review
+  const itemResponse = await axios.get(`bitems/frontend/backend/getItem.php?id=${route.query.id}`)
+  item.value = itemResponse.data.item
+  canReview.value = false
 }
 
 function handlePaymentSuccess() {
@@ -881,5 +848,22 @@ function formatDate(timestamp: string) {
   opacity: 0.7;
   font-size: 1.2rem;
   font-weight: 500;
+}
+
+.bookmark-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  color: var(--on-surface);
+  font-size: 1.1rem;
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  transition: color 0.2s;
+}
+
+.bookmark-btn:hover {
+  color: var(--primary-light);
 }
 </style> 

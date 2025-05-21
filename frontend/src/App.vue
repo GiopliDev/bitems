@@ -51,10 +51,10 @@ onMounted(async () => {
       })
       if (userResponse.data.success) {
         user.value = {
-          id: userResponse.data.profile.ute_id,
-          username: userResponse.data.profile.ute_username,
-          balance: userResponse.data.profile.ute_saldo,
-          avatar: userResponse.data.profile.ute_pfpUrl
+          ute_id: userResponse.data.profile.ute_id,
+          ute_username: userResponse.data.profile.ute_username,
+          ute_balance: userResponse.data.profile.ute_saldo,
+          ute_img_url: userResponse.data.profile.ute_img_url
         }
       }
     }

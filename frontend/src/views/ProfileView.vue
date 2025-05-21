@@ -2,7 +2,11 @@
   <div class="profile-layout">
     <div class="profile-header">
       <div class="profile-image-container">
-        <img :src="profile.ute_pfpUrl || '/default-avatar.png'" alt="Profile" class="profile-image" />
+        <img 
+          :src="profile.ute_img_url ? `/bitems/frontend/UploadedImages/${profile.ute_img_url}` : '/default-avatar.png'" 
+          alt="Profile" 
+          class="profile-image" 
+        />
         <button v-if="isOwnProfile" class="edit-image-btn" @click="triggerImageUpload">
           <span class="icon">📷</span>
         </button>
@@ -156,7 +160,7 @@ async function onImageChange(e: Event) {
       })
 
       if (updateResponse.data.success) {
-        profile.value.ute_pfpUrl = uploadResponse.data.image_url
+        profile.value.ute_img_id = uploadResponse.data.image_id
       }
     }
   } catch (error) {

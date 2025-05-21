@@ -25,7 +25,9 @@ if($_SERVER['REQUEST_METHOD'] == 'GET') {
             u.ute_img_id as seller_img_id,
             i.img_url as seller_img_url,
             GROUP_CONCAT(DISTINCT tg.tag_nome) as tags,
-            GROUP_CONCAT(DISTINCT img.img_url) as images
+            GROUP_CONCAT(DISTINCT img.img_url) as images,
+            (SELECT COUNT(*) FROM recensioni WHERE rec_art_id = a.art_id AND rec_voto = 1) as likes,
+            (SELECT COUNT(*) FROM recensioni WHERE rec_art_id = a.art_id AND rec_voto = 0) as dislikes
             FROM articoli a
             LEFT JOIN giochiaffiliati g ON a.art_gio_id = g.gio_id
             LEFT JOIN tipologie t ON a.art_tip_id = t.tip_id

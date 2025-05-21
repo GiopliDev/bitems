@@ -5,6 +5,9 @@
       <h2>Pagamento</h2>
       <div class="payment-details">
         <p>Saldo attuale: {{ currentBalance }}€</p>
+        <p>Prezzo unitario: {{ price }}€</p>
+        <p>Quantità: {{ quantity }}</p>
+        <p>Tasse: 1.00€</p>
         <p>Totale da pagare: {{ totalPrice }}€</p>
         <p v-if="error" class="error-message">{{ error }}</p>
       </div>
@@ -19,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from '@/config/axios'
 
@@ -35,6 +38,10 @@ const router = useRouter()
 const currentBalance = ref(0)
 const processing = ref(false)
 const error = ref('')
+
+const totalPrice = computed(() => {
+  return (props.price * props.quantity + 1).toFixed(2)
+})
 
 async function checkSession() {
   try {

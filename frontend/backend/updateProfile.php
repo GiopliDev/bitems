@@ -11,7 +11,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     $userId = $_SESSION['user_id'];
-    $data = json_decode(file_get_contents('php://input'), true);
+    $data = json_decode(file_get_contents('php://input'), true); //dati inviati dal frontend come json questo è un test
     
     if(!$data || !isset($data['action'])) {
         http_response_code(400);

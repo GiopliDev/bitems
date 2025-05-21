@@ -112,6 +112,7 @@ function getCatalogoDivisoInSezioni(){
                 tipologie.tip_nome as category_name,
                 utenti.ute_username as seller_name,
                 utenti.ute_rep as seller_rep,
+                GROUP_CONCAT(DISTINCT tg.tag_nome) as tags,
                 (SELECT img.img_url 
                  FROM images_articoli ia 
                  JOIN images img ON ia.img_id = img.img_id 
@@ -122,7 +123,10 @@ function getCatalogoDivisoInSezioni(){
                 INNER JOIN giochiaffiliati ON articoli.art_gio_id = giochiaffiliati.gio_id
                 INNER JOIN tipologie ON articoli.art_tip_id = tipologie.tip_id
                 INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id
+                LEFT JOIN tags_articoli ta ON articoli.art_id = ta.art_id
+                LEFT JOIN tags tg ON ta.tag_id = tg.tag_id
                 WHERE articoli.art_gio_id = ? AND articoli.art_isPrivato = 0
+                GROUP BY articoli.art_id
                 ORDER BY articoli.art_timestamp DESC
                 LIMIT 4";
         
@@ -133,7 +137,7 @@ function getCatalogoDivisoInSezioni(){
         
         $gameItems = [];
         while($item = $items->fetch_assoc()) {
-            $item['tags'] = getTopTagsForItem($item['art_id']);
+            $item['tags'] = $item['tags'] ? explode(',', $item['tags']) : [];
             $gameItems[] = $item;
         }
         
@@ -146,12 +150,6 @@ function getCatalogoDivisoInSezioni(){
 }
 
 function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAvailable, $tags){
-    //se onlyAvailable è true, allora art_status = 'D'
-    //sull url l'array tags è di formato tags=tag1,tag2,tag3
-    //quindi devo fare una query per ogni tag
-    //problema: per ogni parametro devo aggiungere la sua parte nella query e poi aggiungere il bind_param
-    //https://www.youtube.com/watch?v=dQw4w9WgXcQ&pp=ygULcmljayBhc3RsZXk%3D per boostare il morale 
-
     $conn = connection();
     
     // Base query
@@ -167,6 +165,7 @@ function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAv
             tipologie.tip_nome as category_name,
             utenti.ute_username as seller_name,
             utenti.ute_rep as seller_rep,
+            GROUP_CONCAT(DISTINCT tg.tag_nome) as tags,
             (SELECT img.img_url 
              FROM images_articoli ia 
              JOIN images img ON ia.img_id = img.img_id 
@@ -177,6 +176,8 @@ function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAv
             INNER JOIN giochiaffiliati ON articoli.art_gio_id = giochiaffiliati.gio_id
             INNER JOIN tipologie ON articoli.art_tip_id = tipologie.tip_id
             INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id
+            LEFT JOIN tags_articoli ta ON articoli.art_id = ta.art_id
+            LEFT JOIN tags tg ON ta.tag_id = tg.tag_id
             WHERE articoli.art_isPrivato = 0";
     
     $types = "";
@@ -229,7 +230,7 @@ function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAv
         }
     }
     
-    $sql .= " ORDER BY articoli.art_timestamp DESC";
+    $sql .= " GROUP BY articoli.art_id ORDER BY articoli.art_timestamp DESC";
     
     $stmt = $conn->prepare($sql);
     if (!empty($values)) {
@@ -240,45 +241,12 @@ function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAv
     
     $items = [];
     while($row = $result->fetch_assoc()) {
-        $row['tags'] = getTopTagsForItem($row['art_id']);
+        $row['tags'] = $row['tags'] ? explode(',', $row['tags']) : [];
         $items[] = $row;
     }
     
     return json_encode(['data' => $items]);
 }
-
-// da unire alla funzione getCatalogoFiltrato
-//function getCatalogoDiUnaSezione($sezione){
-//    $conn = connection();
-//    $sql = "SELECT 
-//            articoli.art_id id,
-//            articoli.art_titolo itemName,
-//            articoli.art_prezzoUnitario price,
-//            articoli.art_qtaDisp qty,
-//            articoli.art_descrizione description,
-//            articoli.art_timestamp createdAt,
-//            articoli.art_status status,
-//            utenti.ute_username user,
-//            utenti.ute_rep userRep,
-//            giochiaffiliati.gio_nome gameName
-//            FROM articoli 
-//            INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id 
-//            INNER JOIN giochiaffiliati ON articoli.art_gio_id = giochiaffiliati.gio_id
-//            WHERE articoli.art_gio_id = ? AND articoli.art_status != 'N'
-//            ORDER BY articoli.art_timestamp DESC";
-//    $stmt = $conn->prepare($sql);
-//    $stmt->bind_param('i', $sezione);
-//    $stmt->execute();
-//    $result = $stmt->get_result();
-//    
-//    $items = [];
-//    while($row = $result->fetch_assoc()) {
-//        // Aggiungiamo i tag più utilizzati per questo articolo
-//        $row['tags'] = getTopTagsForItem($row['id']);
-//        $items[] = $row;
-//    }
-//    return json_encode(['data' => $items]);
-//}
 
 function getCatalogoRecenti(){
     $conn = connection();
@@ -298,27 +266,6 @@ function getCatalogoTrending(){ //calcolo in base al numero di acquisti al giorn
     $stmt->execute();
     $result = $stmt->get_result();
     return json_encode($result);
-}
-
-function getTopTagsForItem($art_id) {
-    $conn = connection();
-    $sql = "SELECT t.tag_nome
-            FROM tags_articoli ta
-            INNER JOIN tags t ON ta.tag_id = t.tag_id
-            WHERE ta.art_id = ?
-            LIMIT 4";
-            
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $art_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $tags = [];
-    while($row = $result->fetch_assoc()) {
-        $tags[] = $row['tag_nome'];
-    }
-    
-    return $tags;
 }
 
 ?>

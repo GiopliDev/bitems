@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $conn = connection();
 
     // Get profile data with image URL
-    $sql = "SELECT u.*, i.img_url as ute_pfpUrl 
+    $sql = "SELECT u.*, i.img_url as ute_img_url 
             FROM utenti u 
             LEFT JOIN images i ON u.ute_img_id = i.img_id 
             WHERE u.ute_id = ?";
@@ -34,17 +34,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit();
     }
 
-    // Get degli oggetti di un utente GROUP_CONCAT unisce i valori di una colonna in una stringa
+    // Get degli oggetti di un utente
     $itemsSql = "SELECT a.*, g.gio_nome as game_name, t.tip_nome as category_name,
                         GROUP_CONCAT(DISTINCT tg.tag_nome) as tags,
-                        GROUP_CONCAT(DISTINCT i.img_url) as images
+                        (SELECT img.img_url 
+                         FROM images_articoli ia 
+                         JOIN images img ON ia.img_id = img.img_id 
+                         WHERE ia.art_id = a.art_id 
+                         ORDER BY RAND() 
+                         LIMIT 1) as image
                  FROM articoli a
                  LEFT JOIN giochiaffiliati g ON a.art_gio_id = g.gio_id
                  LEFT JOIN tipologie t ON a.art_tip_id = t.tip_id
                  LEFT JOIN tags_articoli ta ON a.art_id = ta.art_id
                  LEFT JOIN tags tg ON ta.tag_id = tg.tag_id
-                 LEFT JOIN images_articoli ia ON a.art_id = ia.art_id
-                 LEFT JOIN images i ON ia.img_id = i.img_id
                  WHERE a.art_ute_id = ?
                  GROUP BY a.art_id";
     $itemsStmt = $conn->prepare($itemsSql);
@@ -56,7 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     while ($item = $itemsResult->fetch_assoc()) {
         // Convert comma-separated strings to arrays
         $item['tags'] = $item['tags'] ? explode(',', $item['tags']) : [];
-        $item['images'] = $item['images'] ? explode(',', $item['images']) : [];
         $items[] = $item;
     }
 
