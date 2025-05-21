@@ -1,254 +1,303 @@
 <template>
   <div class="profile-layout">
     <div class="profile-header">
-      <div class="profile-avatar-box">
-        <img :src="user.avatar" class="profile-avatar" alt="avatar" />
-        <input v-if="editMode" type="file" accept="image/*" @change="onAvatarChange" />
+      <div class="profile-image-container">
+        <img :src="profile.ute_pfpUrl || '/default-avatar.png'" alt="Profile" class="profile-image" />
+        <button v-if="isOwnProfile" class="edit-image-btn" @click="triggerImageUpload">
+          <span class="icon">📷</span>
+        </button>
+        <input 
+          type="file" 
+          ref="imageInput" 
+          accept="image/*" 
+          style="display: none" 
+          @change="onImageChange"
+        />
       </div>
       <div class="profile-info">
-        <div class="profile-row">
-          <span class="profile-label">Nome:</span>
-          <span v-if="!editMode">{{ user.name }}</span>
-          <input v-else v-model="editUser.name" type="text" />
+        <div class="name-container">
+          <h1 v-if="!isEditing || !isOwnProfile">{{ profile.ute_username }}</h1>
+          <input 
+            v-else 
+            v-model="editingName" 
+            type="text" 
+            class="edit-input"
+            @blur="updateName"
+          />
+          <button v-if="isOwnProfile" class="edit-btn" @click="startEditing">
+            <span class="icon">✏️</span>
+          </button>
         </div>
-        <div class="profile-row">
-          <span class="profile-label">Reputazione:</span>
-          <span class="profile-rep">{{ user.reputation }}</span>
+        <div class="description-container">
+          <p v-if="!isEditing || !isOwnProfile">{{ profile.ute_dex || 'Nessuna descrizione' }}</p>
+          <textarea 
+            v-else 
+            v-model="editingDescription" 
+            class="edit-input"
+            @blur="updateDescription"
+          ></textarea>
         </div>
-        <div class="profile-row">
-          <span class="profile-label">Descrizione:</span>
-          <span v-if="!editMode">{{ user.description }}</span>
-          <textarea v-else v-model="editUser.description" rows="3"></textarea>
-        </div>
-        <div class="profile-actions">
-          <button v-if="!editMode" class="main-btn" @click="editMode = true">Modifica profilo</button>
-          <button v-else class="main-btn" @click="saveProfile">Salva</button>
-          <button v-if="editMode" class="main-btn outline" @click="cancelEdit">Annulla</button>
+        <div class="reputation">
+          <span class="rep-label">Reputazione:</span>
+          <span class="rep-value">{{ profile.ute_rep || 0 }}</span>
         </div>
       </div>
     </div>
-    <div class="profile-items-section">
-      <!-- Solo se l'utente è il proprietario del profilo -->
-      <!-- v-if="isMyProfile" -->
-      <div class="profile-items-block">
-        <h3>Oggetti comprati</h3>
-        <div class="profile-items-list">
-          <div v-for="item in boughtItems" :key="item.id" class="profile-item">
-            <img :src="item.image" alt="item" />
-            <div class="profile-item-info">
-              <div class="profile-item-title">{{ item.title }}</div>
-              <div class="profile-item-game">{{ item.game }}</div>
-            </div>
-          </div>
-        </div>
+
+    <div v-if="userItems.length > 0" class="user-items-section">
+      <h2>{{ isOwnProfile ? 'I tuoi oggetti in vendita' : 'Oggetti in vendita' }}</h2>
+      <div class="items-grid">
+        <ItemCard 
+          v-for="item in userItems" 
+          :key="item.art_id" 
+          :item="item"
+          :is-owner="isOwnProfile"
+        />
       </div>
-      <div class="profile-items-block">
-        <h3>Oggetti salvati</h3>
-        <div class="profile-items-list">
-          <div v-for="item in savedItems" :key="item.id" class="profile-item">
-            <img :src="item.image" alt="item" />
-            <div class="profile-item-info">
-              <div class="profile-item-title">{{ item.title }}</div>
-              <div class="profile-item-game">{{ item.game }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- /v-if -->
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, reactive } from 'vue'
-// Demo dati statici
-const user = reactive({
-  avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-  name: 'Aiden Chavez',
-  reputation: 87,
-  description: 'Appassionato di gaming e collezionista di oggetti rari.'
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
+import axios from '@/config/axios'
+import ItemCard from '../components/ItemCard.vue'
+
+const route = useRoute()
+const profile = ref<any>({})
+const userItems = ref<any[]>([])
+const isEditing = ref(false)
+const editingName = ref('')
+const editingDescription = ref('')
+const imageInput = ref<HTMLInputElement | null>(null)
+const currentUserId = ref<number | null>(null)
+
+const isOwnProfile = computed(() => {
+  return currentUserId.value === Number(route.query.id)
 })
-const editUser = reactive({
-  name: user.name,
-  description: user.description,
-  avatar: user.avatar
+
+onMounted(async () => {
+  try {
+    // Carica i dati della sessione
+    const sessionRes = await axios.get('/bitems/frontend/backend/session.php', {
+      params: { action: 'check' }
+    })
+    currentUserId.value = sessionRes.data.userId
+
+    // Carica i dati del profilo
+    const profileRes = await axios.get('/bitems/frontend/backend/getProfile.php', {
+      params: { id: route.query.id }
+    })
+    profile.value = profileRes.data.profile
+    userItems.value = profileRes.data.items
+  } catch (error) {
+    console.error('Error loading profile:', error)
+  }
 })
-const editMode = ref(false)
-function onAvatarChange(e) {
-  const file = e.target.files[0]
-  if (file) {
-    const url = URL.createObjectURL(file)
-    editUser.avatar = url
+
+function startEditing() {
+  isEditing.value = true
+  editingName.value = profile.value.ute_username
+  editingDescription.value = profile.value.ute_dex
+}
+
+async function updateName() {
+  try {
+    await axios.post('/bitems/frontend/backend/updateProfile.php', {
+      action: 'updateName',
+      name: editingName.value
+    })
+    profile.value.ute_username = editingName.value
+    isEditing.value = false
+  } catch (error) {
+    console.error('Error updating name:', error)
   }
 }
-function saveProfile() {
-  user.name = editUser.name
-  user.description = editUser.description
-  user.avatar = editUser.avatar
-  editMode.value = false
-  // Qui invia i dati aggiornati al backend
+
+async function updateDescription() {
+  try {
+    await axios.post('/bitems/frontend/backend/updateProfile.php', {
+      action: 'updateDescription',
+      description: editingDescription.value
+    })
+    profile.value.ute_dex = editingDescription.value
+    isEditing.value = false
+  } catch (error) {
+    console.error('Error updating description:', error)
+  }
 }
-function cancelEdit() {
-  editUser.name = user.name
-  editUser.description = user.description
-  editUser.avatar = user.avatar
-  editMode.value = false
+
+function triggerImageUpload() {
+  imageInput.value?.click()
 }
-// Demo items
-const boughtItems = [
-  { id: 1, title: 'Vandal Prime Skin', game: 'Valorant', image: 'https://via.placeholder.com/80x80?text=Item1' },
-  { id: 2, title: 'Account Gold IV', game: 'League of Legends', image: 'https://via.placeholder.com/80x80?text=Item2' }
-]
-const savedItems = [
-  { id: 3, title: 'AWP | Dragon Lore', game: 'CS:GO', image: 'https://via.placeholder.com/80x80?text=Item3' },
-  { id: 4, title: 'Spectre Nebula', game: 'Valorant', image: 'https://via.placeholder.com/80x80?text=Item4' }
-]
-// const isMyProfile = true // <-- Da implementare lato backend/autenticazione
+
+async function onImageChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (!input.files?.length) return
+
+  const file = input.files[0]
+  const formData = new FormData()
+  formData.append('image', file)
+
+  try {
+    // Prima carica l'immagine
+    const uploadResponse = await axios.post('/bitems/frontend/backend/uploadImage.php', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    if (uploadResponse.data.success) {
+      // Poi aggiorna il profilo con l'ID dell'immagine
+      const updateResponse = await axios.post('/bitems/frontend/backend/updateProfile.php', {
+        action: 'updateImage',
+        image_id: uploadResponse.data.image_id
+      })
+
+      if (updateResponse.data.success) {
+        profile.value.ute_pfpUrl = uploadResponse.data.image_url
+      }
+    }
+  } catch (error) {
+    console.error('Error updating image:', error)
+  }
+}
 </script>
 
 <style scoped>
 .profile-layout {
-  max-width: 900px;
-  margin: 3.5rem auto 2.5rem auto;
-  background: var(--surface);
-  border-radius: 24px;
-  box-shadow: 0 6px 36px #0003;
-  padding: 3.2rem 2.7rem 2.7rem 2.7rem;
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
 }
+
 .profile-header {
   display: flex;
-  gap: 3.2rem;
-  align-items: flex-start;
-  margin-bottom: 3.2rem;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  background: var(--surface);
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 32px #0003;
 }
-.profile-avatar-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
+
+.profile-image-container {
+  position: relative;
+  width: 200px;
+  height: 200px;
 }
-.profile-avatar {
-  width: 130px;
-  height: 130px;
-  border-radius: 50%;
+
+.profile-image {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  border-radius: 50%;
   border: 4px solid var(--primary-light);
-  background: var(--surface-light);
 }
+
+.edit-image-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: var(--primary-light);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.edit-image-btn:hover {
+  background: var(--secondary);
+}
+
 .profile-info {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
 }
-.profile-row {
+
+.name-container {
   display: flex;
   align-items: center;
-  gap: 1.3rem;
-  font-size: 1.18rem;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
-.profile-label {
+
+.name-container h1 {
+  font-size: 2.5rem;
   color: var(--primary-light);
-  font-weight: 700;
-  min-width: 120px;
+  margin: 0;
 }
-.profile-rep {
+
+.edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: transform 0.2s;
+}
+
+.edit-btn:hover {
+  transform: scale(1.1);
+}
+
+.description-container {
+  color: var(--on-surface);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.reputation {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--on-surface);
+  font-size: 1.1rem;
+}
+
+.rep-label {
+  color: var(--primary-light);
+  font-weight: 600;
+}
+
+.rep-value {
   color: var(--secondary);
   font-weight: 700;
-  font-size: 1.18rem;
 }
-.profile-info input[type="text"], .profile-info textarea {
+
+.edit-input {
   background: var(--surface-light);
   border: 2px solid var(--primary-light);
-  border-radius: 10px;
-  padding: 0.9rem 1.3rem;
+  border-radius: 8px;
+  padding: 0.8rem;
   color: var(--on-surface);
-  font-size: 1.13rem;
+  font-size: 1.1rem;
+  width: 100%;
   outline: none;
-  transition: border-color 0.2s;
 }
-.profile-info input[type="text"]:focus, .profile-info textarea:focus {
+
+.edit-input:focus {
   border-color: var(--secondary);
 }
-.profile-actions {
-  display: flex;
-  gap: 1.2rem;
-  margin-top: 0.9rem;
+
+.user-items-section {
+  margin-top: 3rem;
 }
-.main-btn {
-  padding: 0.9rem 2.1rem;
-  border: 2px solid var(--primary-light);
-  background: var(--primary-light);
-  color: var(--on-primary);
-  font-weight: 700;
-  border-radius: 10px;
-  font-size: 1.13rem;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-}
-.main-btn.outline {
-  background: transparent;
+
+.user-items-section h2 {
   color: var(--primary-light);
-  border: 2px solid var(--primary-light);
+  margin-bottom: 1.5rem;
 }
-.main-btn.outline:hover {
-  background: #222;
-  color: var(--secondary);
-}
-.profile-items-section {
-  margin-top: 2.7rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2.7rem;
-}
-.profile-items-block {
-  background: var(--surface-light);
-  border-radius: 16px;
-  box-shadow: 0 2px 12px #0001;
-  padding: 1.7rem 1.5rem 2rem 1.5rem;
-}
-.profile-items-block h3 {
-  color: var(--primary-light);
-  font-size: 1.25rem;
-  font-weight: 800;
-  margin-bottom: 1.3rem;
-  letter-spacing: 0.01em;
-}
-.profile-items-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.3rem;
-}
-.profile-item {
-  display: flex;
-  align-items: center;
-  gap: 1.1rem;
-  background: var(--surface);
-  border-radius: 12px;
-  padding: 0.9rem 1.3rem;
-  box-shadow: 0 1px 6px #0001;
-  min-width: 220px;
-  max-width: 320px;
-}
-.profile-item img {
-  width: 60px;
-  height: 60px;
-  border-radius: 10px;
-  object-fit: cover;
-  background: var(--surface-light);
-}
-.profile-item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-.profile-item-title {
-  font-weight: 700;
-  color: var(--on-surface);
-  font-size: 1.13rem;
-}
-.profile-item-game {
-  color: var(--primary-light);
-  font-size: 1.01rem;
+
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
 }
 </style> 

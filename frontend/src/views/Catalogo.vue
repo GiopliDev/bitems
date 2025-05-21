@@ -18,7 +18,13 @@
         <h3 class="section-title">{{ game }}</h3>
         <div class="catalogo-cards">
           <ItemCard v-for="item in items" :key="item.id" :item="item" />
-          <router-link :to="{ path: '/catalogo', query: { game: game } }" class="see-more">Vedi tutti</router-link>
+          <router-link 
+            v-if="!route.query.game" 
+            :to="{ path: '/catalogo', query: { game: game } }" 
+            class="see-more"
+          >
+            Vedi tutti
+          </router-link>
         </div>
       </section>
     </div>
@@ -27,11 +33,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import ItemCard from '../components/ItemCard.vue'
 import FilterBar from '../components/FilterBar.vue'
 import axios from '@/config/axios'
 
+const route = useRoute()
 const catalogo = ref<Record<string, any[]>>({})
 const hotItems = ref<any[]>([])
 const recentItems = ref<any[]>([])
@@ -42,13 +50,33 @@ function handleFiltersApplied(filteredData: any[]) {
   itemsByGame.value = { 'Risultati Filtro': filteredData }
 }
 
-onMounted(() => {
-  axios.get('/bitems/frontend/backend/getCatalogo.php',{params: {action: 'getCatalogoDivisoInSezioni'}}).then((response: { data: any }) => {
-    catalogo.value = response.data.data
-    itemsByGame.value = response.data.data
-    console.log('Catalogo:', catalogo.value)
-  })
-})
+async function loadCatalogo() {
+  try {
+    if (route.query.game) {
+      // Se c'è un game nell'URL, carica il catalogo filtrato
+      const response = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
+        params: {
+          action: 'getCatalogoFiltrato',
+          gameName: route.query.game
+        }
+      })
+      itemsByGame.value = { [route.query.game as string]: response.data.data }
+    } else {
+      // Altrimenti carica il catalogo completo
+      const response = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
+        params: { action: 'getCatalogoDivisoInSezioni' }
+      })
+      catalogo.value = response.data.data
+      itemsByGame.value = response.data.data
+    }
+  } catch (error) {
+    console.error('Error loading catalog:', error)
+  }
+}
+
+// Carica il catalogo al mount e quando cambia il parametro game
+onMounted(loadCatalogo)
+watch(() => route.query.game, loadCatalogo)
 </script>
 
 <style scoped>

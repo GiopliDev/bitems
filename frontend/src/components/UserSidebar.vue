@@ -5,19 +5,49 @@
       <h3>{{ user?.username || 'User' }}</h3>
     </div>
     <nav class="sidebar-menu">
-      <router-link to="/profile" class="sidebar-link" active-class="active">Profile</router-link>
+      <router-link 
+        :to="{ 
+          path: '/profile',
+          query: { id: user?.id }
+        }" 
+        class="sidebar-link" 
+        active-class="active"
+      >
+        Profile
+      </router-link>
       <router-link to="/addItem" class="sidebar-link" active-class="active">Add Item</router-link>
       <router-link to="/history" class="sidebar-link" active-class="active">See History</router-link>
       <router-link to="/chats" class="sidebar-link" active-class="active">Chats</router-link>
       <router-link to="/bookmarks" class="sidebar-link" active-class="active">Bookmarks</router-link>
+      <button @click="logout" class="sidebar-link logout-btn">
+        Logout
+      </button>
     </nav>
   </aside>
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+import axios from '@/config/axios'
+
 const props = defineProps({
   user: Object
 })
+
+const router = useRouter()
+
+async function logout() {
+  try {
+    await axios.get('/bitems/frontend/backend/session.php', {
+      params: { action: 'logout' }
+    })
+    localStorage.removeItem('user')
+    router.push('/')
+    window.location.reload() // Ricarica la pagina per aggiornare lo stato
+  } catch (error) {
+    console.error('Error during logout:', error)
+  }
+}
 </script>
 
 <style scoped>
@@ -65,11 +95,25 @@ const props = defineProps({
   transition: background 0.2s, border-color 0.2s, color 0.2s;
   background: #23232b;
   margin-bottom: 0.2rem;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
 }
 .sidebar-link:hover, .sidebar-link.active {
   background: #23232b;
   border-left: 4px solid var(--secondary, #03dac6);
   color: var(--secondary, #03dac6);
+}
+.logout-btn {
+  margin-top: auto;
+  color: var(--error, #cf6679) !important;
+  border-left: 4px solid var(--error, #cf6679) !important;
+}
+.logout-btn:hover {
+  background: #23232b;
+  color: var(--error, #cf6679) !important;
+  border-left: 4px solid var(--error, #cf6679) !important;
 }
 </style>
 

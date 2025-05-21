@@ -7,10 +7,10 @@
           Bit<span>Items</span>
         </a>
         <nav class="nav-links">
-          <a href="#" class="nav-link">Home</a>
-          <a href="#" class="nav-link">Giochi</a>
-          <a href="#" class="nav-link">Oggetti Virtuali</a>
-          <a href="#" class="nav-link">Top Vendite</a>
+          <a href="/" class="nav-link">Home</a>
+          <a href="/" class="nav-link">Giochi</a>
+          <a href="/catalogo" class="nav-link">Oggetti Virtuali</a>
+          <a href="/top-vendite" class="nav-link">Top Vendite</a>
         </nav>
         <div v-if="user" class="user-info-bar">
           Hi {{ user?.ute_username || 'User' }}!<br>

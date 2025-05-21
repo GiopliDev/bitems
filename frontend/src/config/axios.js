@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-    baseURL: 'http://localhost',
+    baseURL: '/',
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -12,16 +12,7 @@ const instance = axios.create({
 instance.interceptors.response.use(
     response => response,
     error => {
-        if (error.response) {
-            // Gestione errori di risposta
-            console.error('Errore di risposta:', error.response.data);
-        } else if (error.request) {
-            // La richiesta è stata fatta ma non c'è stata risposta
-            console.error('Nessuna risposta ricevuta:', error.request);
-        } else {
-            // Errore nella configurazione della richiesta
-            console.error('Errore nella richiesta:', error.message);
-        }
+        console.error('Errore di risposta:', error);
         return Promise.reject(error);
     }
 );

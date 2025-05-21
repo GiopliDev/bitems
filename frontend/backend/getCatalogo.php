@@ -101,22 +101,28 @@ function getCatalogoDivisoInSezioni(){
     // Per ogni gioco, prendiamo i primi 4 articoli
     while($game = $result->fetch_assoc()) {
         $sql = "SELECT 
-                articoli.art_id id,
-                articoli.art_titolo itemName,
-                articoli.art_prezzoUnitario price,
-                articoli.art_qtaDisp qty,
-                articoli.art_descrizione as description,
-                articoli.art_timestamp createdAt,
-                articoli.art_status as status,
-                utenti.ute_username user,
-                utenti.ute_rep userRep,
-                giochiaffiliati.gio_nome gameName,
-                tipologie.tip_nome category
+                articoli.art_id,
+                articoli.art_titolo,
+                articoli.art_prezzoUnitario,
+                articoli.art_qtaDisp,
+                articoli.art_descrizione,
+                articoli.art_timestamp,
+                articoli.art_isPrivato,
+                giochiaffiliati.gio_nome as game_name,
+                tipologie.tip_nome as category_name,
+                utenti.ute_username as seller_name,
+                utenti.ute_rep as seller_rep,
+                (SELECT img.img_url 
+                 FROM images_articoli ia 
+                 JOIN images img ON ia.img_id = img.img_id 
+                 WHERE ia.art_id = articoli.art_id 
+                 ORDER BY RAND() 
+                 LIMIT 1) as image
                 FROM articoli 
-                INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id 
                 INNER JOIN giochiaffiliati ON articoli.art_gio_id = giochiaffiliati.gio_id
                 INNER JOIN tipologie ON articoli.art_tip_id = tipologie.tip_id
-                WHERE articoli.art_gio_id = ? AND articoli.art_status != 'N'
+                INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id
+                WHERE articoli.art_gio_id = ? AND articoli.art_isPrivato = 0
                 ORDER BY articoli.art_timestamp DESC
                 LIMIT 4";
         
@@ -127,8 +133,7 @@ function getCatalogoDivisoInSezioni(){
         
         $gameItems = [];
         while($item = $items->fetch_assoc()) {
-            // Aggiungiamo i tag più utilizzati per questo articolo
-            $item['tags'] = getTopTagsForItem($item['id']);
+            $item['tags'] = getTopTagsForItem($item['art_id']);
             $gameItems[] = $item;
         }
         
@@ -150,22 +155,29 @@ function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAv
     $conn = connection();
     
     // Base query
-    $sql = "SELECT articoli.art_id id,
-            articoli.art_titolo itemName,
-            articoli.art_prezzoUnitario price,
-            articoli.art_qtaDisp qty,
-            articoli.art_descrizione as description,
-            articoli.art_timestamp createdAt,
-            articoli.art_status as status,
-            utenti.ute_username user,
-            utenti.ute_rep userRep,
-            tipologie.tip_nome category,
-            giochiaffiliati.gio_nome gameName
+    $sql = "SELECT 
+            articoli.art_id,
+            articoli.art_titolo,
+            articoli.art_prezzoUnitario,
+            articoli.art_qtaDisp,
+            articoli.art_descrizione,
+            articoli.art_timestamp,
+            articoli.art_isPrivato,
+            giochiaffiliati.gio_nome as game_name,
+            tipologie.tip_nome as category_name,
+            utenti.ute_username as seller_name,
+            utenti.ute_rep as seller_rep,
+            (SELECT img.img_url 
+             FROM images_articoli ia 
+             JOIN images img ON ia.img_id = img.img_id 
+             WHERE ia.art_id = articoli.art_id 
+             ORDER BY RAND() 
+             LIMIT 1) as image
             FROM articoli 
-            INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id 
             INNER JOIN giochiaffiliati ON articoli.art_gio_id = giochiaffiliati.gio_id
             INNER JOIN tipologie ON articoli.art_tip_id = tipologie.tip_id
-            WHERE articoli.art_status != 'N'";
+            INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id
+            WHERE articoli.art_isPrivato = 0";
     
     $types = "";
     $values = [];
@@ -175,6 +187,13 @@ function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAv
         $sql .= " AND giochiaffiliati.gio_nome = ?";
         $types .= "s";
         $values[] = $gameName;
+    }
+    
+    // Category filter
+    if (!empty($category)) {
+        $sql .= " AND tipologie.tip_nome = ?";
+        $types .= "s";
+        $values[] = $category;
     }
     
     // Price range filter
@@ -210,18 +229,6 @@ function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAv
         }
     }
     
-    // Category filter
-    if (!empty($category)) {
-        $sql .= " AND EXISTS (
-            SELECT 1 FROM tipologie_articoli ta 
-            INNER JOIN tipologie t ON ta.tip_id = t.tip_id 
-            WHERE ta.art_id = articoli.art_id 
-            AND t.tip_nome = ?
-        )";
-        $types .= "s";
-        $values[] = $category;
-    }
-    
     $sql .= " ORDER BY articoli.art_timestamp DESC";
     
     $stmt = $conn->prepare($sql);
@@ -233,7 +240,7 @@ function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAv
     
     $items = [];
     while($row = $result->fetch_assoc()) {
-        $row['tags'] = getTopTagsForItem($row['id']);
+        $row['tags'] = getTopTagsForItem($row['art_id']);
         $items[] = $row;
     }
     
@@ -295,13 +302,10 @@ function getCatalogoTrending(){ //calcolo in base al numero di acquisti al giorn
 
 function getTopTagsForItem($art_id) {
     $conn = connection();
-    $sql = "SELECT t.tag_nome, COUNT(ta2.tag_id) as usage_count
-            FROM tags_articoli ta1
-            INNER JOIN tags t ON ta1.tag_id = t.tag_id
-            INNER JOIN tags_articoli ta2 ON ta1.tag_id = ta2.tag_id
-            WHERE ta1.art_id = ?
-            GROUP BY t.tag_id, t.tag_nome
-            ORDER BY usage_count DESC
+    $sql = "SELECT t.tag_nome
+            FROM tags_articoli ta
+            INNER JOIN tags t ON ta.tag_id = t.tag_id
+            WHERE ta.art_id = ?
             LIMIT 4";
             
     $stmt = $conn->prepare($sql);

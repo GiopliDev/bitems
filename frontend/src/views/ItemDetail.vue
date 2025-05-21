@@ -1,13 +1,26 @@
 <template>
   <div class="item-detail-layout" v-if="item">
     <div class="item-main">
-      <h2 class="item-title">{{ item.art_titolo }}</h2>
-      <div class="item-slider">
+      <div class="item-header">
+        <h2 class="item-title">{{ item.art_titolo }}</h2>
+        <div v-if="item.isOwner" class="item-actions">
+          <button class="edit-btn" @click="showEditPopup = true">
+            <i class="fas fa-edit"></i> Modifica
+          </button>
+          <button class="delete-btn" @click="confirmDelete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+      <div class="item-slider" v-if="item.images && item.images.length > 0">
         <button class="slider-btn" @click="prevImage">&#8592;</button>
         <img :src="currentImage" alt="item image" class="slider-img" />
         <button class="slider-btn" @click="nextImage">&#8594;</button>
       </div>
-      <div class="slider-dots">
+      <div v-else class="no-image">
+        <span class="no-image-text">No image</span>
+      </div>
+      <div class="slider-dots" v-if="item.images && item.images.length > 0">
         <span v-for="(img, idx) in item.images" :key="idx" :class="['dot', {active: idx === imageIndex}]" @click="goToImage(idx)"></span>
       </div>
       <div class="item-info-row">
@@ -34,24 +47,77 @@
       </div>
       <div class="item-reviews">
         <h3>Recensioni</h3>
-        <div v-for="review in item.recensioni" :key="review.rec_id" class="review">
-          <div class="review-header">
-            <span class="review-user">{{ review.ute_username }}</span>
-            <span class="review-rating">
-              <i v-for="n in 5" :key="n" 
-                 :class="['fa-star', n <= review.rec_voto ? 'fa-solid' : 'fa-regular']"></i>
-            </span>
+        <div v-if="canReview" class="add-review">
+          <h4>Aggiungi una recensione</h4>
+          <div class="review-rating">
+            <button 
+              class="rating-btn" 
+              :class="{ active: reviewRating === 1 }"
+              @click="reviewRating = 1"
+            >
+              <i class="fas fa-thumbs-up"></i>
+            </button>
+            <button 
+              class="rating-btn" 
+              :class="{ active: reviewRating === 0 }"
+              @click="reviewRating = 0"
+            >
+              <i class="fas fa-thumbs-down"></i>
+            </button>
           </div>
-          <div class="review-body">{{ review.rec_dex }}</div>
+          <textarea 
+            v-model="reviewDescription" 
+            placeholder="Scrivi la tua recensione..."
+            class="review-textarea"
+          ></textarea>
+          <button 
+            class="main-btn" 
+            @click="submitReview"
+            :disabled="!reviewDescription || reviewRating === null"
+          >
+            Invia Recensione
+          </button>
+        </div>
+        <div v-if="item.recensioni && item.recensioni.length > 0" class="reviews-list">
+          <div v-for="review in item.recensioni" :key="review.rec_id" class="review">
+            <div class="review-header">
+              <div class="review-user-info">
+                <span class="review-user">{{ review.ute_username }}</span>
+                <span class="review-date">{{ formatDate(review.rec_timestamp) }}</span>
+              </div>
+              <span class="review-rating" :class="{ positive: review.rec_voto, negative: !review.rec_voto }">
+                <i :class="['fas', review.rec_voto ? 'fa-thumbs-up' : 'fa-thumbs-down']"></i>
+                {{ review.rec_voto ? 'Positiva' : 'Negativa' }}
+              </span>
+            </div>
+            <div class="review-body">{{ review.rec_dex }}</div>
+          </div>
+        </div>
+        <div v-else class="no-reviews">
+          <p>Nessuna recensione disponibile</p>
         </div>
       </div>
     </div>
     <div class="item-side">
       <div class="user-box">
-        <div class="user-avatar"><i class="fa-regular fa-user"></i></div>
+        <div class="user-avatar">
+          <img 
+            :src="`/bitems/frontend/UploadedImages/${item.seller_img_url}`" 
+            :alt="item.seller_name"
+            class="avatar-img"
+          />
+        </div>
         <div class="user-info">
-          <div class="user-name">{{ item.ute_username }}</div>
-          <div class="user-rep">Reputazione: {{ item.ute_rep }}</div>
+          <router-link 
+            :to="{ path: '/profile', query: { id: item.art_ute_id }}" 
+            class="user-name"
+          >
+            {{ item.seller_name }}
+          </router-link>
+          <div class="user-rep">
+            <span class="rep-label">Reputazione:</span>
+            <span class="rep-value" :class="getReputationClass(item.seller_rep)">{{ item.seller_rep }}</span>
+          </div>
         </div>
       </div>
       <div class="order-summary">
@@ -78,7 +144,20 @@
       </div>
     </div>
   </div>
-  <PaymentPopup v-if="showPaymentPopup" @close="showPaymentPopup = false" />
+  <PaymentPopup 
+    v-if="showPaymentPopup" 
+    :itemId="item?.art_id"
+    :quantity="orderQty"
+    :price="item?.art_prezzoUnitario"
+    @close="showPaymentPopup = false"
+    @payment-success="handlePaymentSuccess"
+  />
+  <EditItemPopup 
+    v-if="showEditPopup" 
+    :item="item"
+    @close="showEditPopup = false"
+    @item-updated="handleItemUpdate"
+  />
   <CustomAlert
     v-if="showAlert"
     :show="showAlert"
@@ -94,6 +173,7 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from '@/config/axios'
 import PaymentPopup from '../components/PaymentPopup.vue'
 import CustomAlert from '../components/CustomAlert.vue'
+import EditItemPopup from '../components/EditItemPopup.vue'
 
 interface Review {
   rec_id: number
@@ -102,6 +182,7 @@ interface Review {
   rec_voto: number
   rec_dex: string
   ute_username: string
+  rec_timestamp: string
 }
 
 interface Item {
@@ -112,12 +193,15 @@ interface Item {
   art_descrizione: string
   art_timestamp: string
   art_status: string
-  ute_id: number
-  ute_username: string
-  ute_rep: number
+  art_ute_id: number
+  seller_name: string
+  seller_rep: number
+  seller_img_id: number
+  seller_img_url: string
   recensioni: Review[]
   tags?: string[]
   images?: string[]
+  isOwner: boolean
 }
 
 const route = useRoute()
@@ -129,6 +213,7 @@ const currentImage = ref('')
 const showPaymentPopup = ref(false)
 const generalLikes = ref(10)
 const generalDislikes = ref(2)
+const showEditPopup = ref(false)
 
 // Alert state
 const showAlert = ref(false)
@@ -141,13 +226,21 @@ const isLoggedIn = computed(() => {
   return localStorage.getItem('user') !== null
 })
 
+const reviewRating = ref<number | null>(null)
+const reviewDescription = ref('')
+const canReview = ref(false)
+
 onMounted(async () => {
   try {
-    const response = await axios.get(`/frontend/backend/getItem.php?id=${route.query.id}`)
-    item.value = response.data
+    const response = await axios.get(`bitems/frontend/backend/getItem.php?id=${route.query.id}`)
+    item.value = response.data.item
     if (item.value?.images?.length) {
-      currentImage.value = item.value.images[0]
+      currentImage.value = `/bitems/frontend/UploadedImages/${item.value.images[0]}`
     }
+
+    // Check if user can review
+    const reviewCheck = await axios.get(`/bitems/frontend/backend/checkCanReview.php?itemId=${route.query.id}`)
+    canReview.value = reviewCheck.data.canReview
   } catch (error) {
     console.error('Errore nel recupero dei dati:', error)
   }
@@ -156,19 +249,19 @@ onMounted(async () => {
 function prevImage() {
   if (!item.value?.images?.length) return
   imageIndex.value = (imageIndex.value - 1 + item.value.images.length) % item.value.images.length
-  currentImage.value = item.value.images[imageIndex.value]
+  currentImage.value = `/bitems/frontend/UploadedImages/${item.value.images[imageIndex.value]}`
 }
 
 function nextImage() {
   if (!item.value?.images?.length) return
   imageIndex.value = (imageIndex.value + 1) % item.value.images.length
-  currentImage.value = item.value.images[imageIndex.value]
+  currentImage.value = `/bitems/frontend/UploadedImages/${item.value.images[imageIndex.value]}`
 }
 
 function goToImage(idx: number) {
   if (!item.value?.images?.length) return
   imageIndex.value = idx
-  currentImage.value = item.value.images[imageIndex.value]
+  currentImage.value = `/bitems/frontend/UploadedImages/${item.value.images[imageIndex.value]}`
 }
 
 function showCustomAlert(title: string, subtitle: string) {
@@ -189,6 +282,83 @@ function showLoginAlert() {
   setTimeout(() => {
     router.push('/login')
   }, 2000)
+}
+
+function getReputationClass(rep: number): string {
+  if (rep >= 100) return 'rep-excellent'
+  if (rep >= 50) return 'rep-good'
+  if (rep >= 20) return 'rep-average'
+  return 'rep-bad'
+}
+
+async function confirmDelete() {
+  if (confirm('Sei sicuro di voler eliminare questo articolo?')) {
+    try {
+      const response = await axios.delete(`/bitems/frontend/backend/deleteItem.php?id=${item.value?.art_id}`)
+      if (response.data.success) {
+        router.push('/catalogo')
+      } else {
+        showCustomAlert('Errore', 'Impossibile eliminare l\'articolo')
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error)
+      showCustomAlert('Errore', 'Si è verificato un errore durante l\'eliminazione')
+    }
+  }
+}
+
+function handleItemUpdate(updatedItem: Item) {
+  item.value = updatedItem
+  showEditPopup.value = false
+}
+
+async function submitReview() {
+  if (!reviewDescription.value || reviewRating.value === null) return
+
+  try {
+    const response = await axios.post('/bitems/frontend/backend/addReview.php', {
+      itemId: item.value?.art_id,
+      rating: reviewRating.value,
+      description: reviewDescription.value
+    })
+
+    if (response.data.success) {
+      // Reload item data to show new review
+      const itemResponse = await axios.get(`bitems/frontend/backend/getItem.php?id=${route.query.id}`)
+      item.value = itemResponse.data.item
+      canReview.value = false
+      reviewRating.value = null
+      reviewDescription.value = ''
+    }
+  } catch (error) {
+    console.error('Error submitting review:', error)
+  }
+}
+
+function handlePaymentSuccess() {
+  showPaymentPopup.value = false
+  // Ricarica i dati dell'articolo per aggiornare la quantità disponibile
+  loadItemData()
+}
+
+async function loadItemData() {
+  try {
+    const response = await axios.get(`bitems/frontend/backend/getItem.php?id=${route.query.id}`)
+    item.value = response.data.item
+  } catch (error) {
+    console.error('Error loading item data:', error)
+  }
+}
+
+function formatDate(timestamp: string) {
+  const date = new Date(timestamp)
+  return date.toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 </script>
 
@@ -213,6 +383,52 @@ function showLoginAlert() {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+  width: 100%;
+}
+
+.item-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.edit-btn, .delete-btn {
+  background: var(--surface-light);
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-btn {
+  color: var(--primary-light);
+  border: 2px solid var(--primary-light);
+}
+
+.delete-btn {
+  color: var(--error);
+  border: 2px solid var(--error);
+}
+
+.edit-btn:hover {
+  background: var(--primary-light);
+  color: var(--on-primary);
+}
+
+.delete-btn:hover {
+  background: var(--error);
+  color: var(--on-primary);
 }
 
 .item-title {
@@ -340,26 +556,97 @@ function showLoginAlert() {
 
 .item-reviews {
   margin-top: 2rem;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 1.5rem;
 }
 
 .item-reviews h3 {
   color: var(--primary-light);
   font-size: 1.3rem;
+  margin-bottom: 1.5rem;
+}
+
+.add-review {
+  background: var(--surface-light);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+}
+
+.add-review h4 {
+  color: var(--primary-light);
   margin-bottom: 1rem;
+}
+
+.review-rating {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.rating-btn {
+  background: none;
+  border: 2px solid var(--secondary);
+  color: var(--secondary);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rating-btn.active {
+  background: var(--secondary);
+  color: var(--on-primary);
+}
+
+.rating-btn:hover {
+  transform: scale(1.1);
+}
+
+.review-textarea {
+  width: 100%;
+  min-height: 100px;
+  background: transparent;
+  border: 2px solid var(--secondary);
+  border-radius: 8px;
+  padding: 0.8rem;
+  color: var(--on-surface);
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  resize: vertical;
+}
+
+.review-textarea:focus {
+  outline: none;
+  border-color: var(--primary-light);
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .review {
   background: var(--surface-light);
   padding: 1.2rem;
   border-radius: 12px;
-  margin-bottom: 1rem;
 }
 
 .review-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.8rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.review-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
 
 .review-user {
@@ -367,13 +654,44 @@ function showLoginAlert() {
   color: var(--primary-light);
 }
 
+.review-date {
+  font-size: 0.9rem;
+  color: var(--on-surface);
+  opacity: 0.7;
+}
+
 .review-rating {
-  color: var(--secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.review-rating.positive {
+  background: var(--secondary);
+  color: #18181c;
+}
+
+.review-rating.negative {
+  background: var(--error);
+  color: var(--on-error);
 }
 
 .review-body {
   color: var(--on-surface);
   line-height: 1.5;
+  font-size: 1rem;
+}
+
+.no-reviews {
+  text-align: center;
+  padding: 2rem;
+  color: var(--on-surface);
+  opacity: 0.7;
+  font-style: italic;
 }
 
 .item-side {
@@ -386,39 +704,87 @@ function showLoginAlert() {
 
 .user-box {
   background: var(--surface);
-  border-radius: 16px;
-  padding: 1.5rem;
+  border-radius: 12px;
+  padding: 1.2rem;
   display: flex;
   align-items: center;
   gap: 1rem;
-  box-shadow: 0 2px 16px #0002;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 12px #0001;
 }
 
 .user-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
   background: var(--surface-light);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
-  color: var(--primary-light);
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-info {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
 
 .user-name {
-  font-weight: 600;
   color: var(--primary-light);
-  margin-bottom: 0.3rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.user-name:hover {
+  color: var(--secondary);
 }
 
 .user-rep {
-  color: var(--secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.rep-label {
+  color: var(--on-surface);
+  opacity: 0.8;
+}
+
+.rep-value {
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
   font-size: 0.9rem;
+}
+
+.rep-excellent {
+  background: #4CAF50;
+  color: white;
+}
+
+.rep-good {
+  background: #8BC34A;
+  color: white;
+}
+
+.rep-average {
+  background: #FFC107;
+  color: #18181c;
+}
+
+.rep-bad {
+  background: #FF5722;
+  color: white;
 }
 
 .order-summary {
@@ -497,5 +863,23 @@ function showLoginAlert() {
 
 .main-btn:hover {
   background: var(--secondary);
+}
+
+.no-image {
+  width: 320px;
+  height: 180px;
+  background: var(--surface-light);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.no-image-text {
+  color: var(--on-surface);
+  opacity: 0.7;
+  font-size: 1.2rem;
+  font-weight: 500;
 }
 </style> 

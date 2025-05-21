@@ -8,11 +8,9 @@
       </div>
       <div class="form-row">
         <label for="game">Gioco dell'Oggetto</label>
-        <select id="game" v-model="form.game" @change="onGameChange">
+        <select id="game" v-model="form.game">
           <option v-for="g in games" :key="g" :value="g">{{ g }}</option>
-          <option value="Altro">Altro...</option>
         </select>
-        <input v-if="form.game === 'Altro'" v-model="form.otherGame" type="text" placeholder="Specifica il gioco" />
       </div>
       <div class="form-row">
         <label for="description">Descrizione</label>
@@ -82,12 +80,17 @@
         </div>
       </div>
       <div class="form-row">
-        <label for="status">Stato articolo</label>
-        <select id="status" v-model="form.status">
-          <option value="disponibile">Disponibile</option>
-          <option value="esaurito">Esaurito</option>
-          <option value="non visibile">Non visibile</option>
-        </select>
+        <label for="isPrivato">Visibilità articolo</label>
+        <div class="visibility-toggle">
+          <label class="toggle-label">
+            <input 
+              type="checkbox" 
+              id="isPrivato" 
+              v-model="form.isPrivato"
+            />
+            <span class="toggle-text">{{ form.isPrivato ? 'Privato' : 'Pubblico' }}</span>
+          </label>
+        </div>
       </div>
       <button class="main-btn" type="submit">Aggiungi articolo</button>
     </form>
@@ -97,18 +100,18 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import axios from '@/config/axios'
+import { useRouter } from 'vue-router'
 
 interface FormData {
   title: string;
   game: string;
-  otherGame: string;
   description: string;
   qty: number;
   price: number;
   images: Array<{file: File; url: string}>;
   category: string;
   tags: string[];
-  status: string;
+  isPrivato: boolean;
 }
 
 const games = ref<string[]>([])
@@ -117,18 +120,18 @@ const tagInput = ref('')
 const tagSuggestions = ref<string[]>([])
 const showTagSuggestions = ref(false)
 const createTagButton = ref(false)
+const router = useRouter()
 
 const form = ref<FormData>({
   title: '',
   game: '',
-  otherGame: '',
   description: '',
   qty: 1,
   price: 0.01,
   images: [],
   category: '',
   tags: [],
-  status: 'disponibile'
+  isPrivato: false
 })
 
 // Carica games e categories al mount
@@ -225,10 +228,6 @@ function removeImage(idx: number) {
   form.value.images.splice(idx, 1)
 }
 
-function onGameChange() {
-  if (form.value.game !== 'Altro') form.value.otherGame = ''
-}
-
 function onTagInput() {
   if (tagInput.value.length >= 3) {
     searchTags()
@@ -279,9 +278,70 @@ function onTagBlur() {
   }, 200)
 }
 
-function submitItem() {
-  // Qui invia i dati al backend o mostra un alert di successo
-  alert('Articolo aggiunto! (demo)')
+async function submitItem() {
+  try {
+    // Prima carica le immagini
+    const uploadedImages = []
+    for (const img of form.value.images) {
+      const formData = new FormData()
+      formData.append('image', img.file)
+      
+      const uploadRes = await axios.post('/bitems/frontend/backend/uploadImage.php', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      
+      if (uploadRes.data.success) {
+        uploadedImages.push({
+          url: uploadRes.data.image_url
+        })
+      }
+    }
+
+    // Poi crea l'item con i dati e le immagini caricate
+    const itemData = {
+      title: form.value.title,
+      game: form.value.game,
+      description: form.value.description,
+      qty: form.value.qty,
+      price: form.value.price,
+      category: form.value.category,
+      tags: form.value.tags,
+      isPrivato: form.value.isPrivato,
+      images: uploadedImages
+    }
+
+    const response = await axios.post('/bitems/frontend/backend/addItem.php', itemData)
+    
+    if (response.data.success) {
+      alert('Articolo aggiunto con successo!')
+      // Reset form
+      form.value = {
+        title: '',
+        game: games.value[0] || '',
+        description: '',
+        qty: 1,
+        price: 0.01,
+        images: [],
+        category: categories.value[0] || '',
+        tags: [],
+        isPrivato: false
+      }
+      tagInput.value = ''
+    } else {
+      alert('Errore durante l\'aggiunta dell\'articolo: ' + (response.data.error || 'Errore sconosciuto'))
+    }
+  } catch (error: any) {
+    console.error('Error submitting item:', error)
+    if (error.response?.status === 401) {
+      alert('Sessione scaduta. Effettua nuovamente il login.')
+      router.push('/login')
+    } else {
+      const errorMessage = error.response?.data?.error || error.response?.data || error.message || 'Errore sconosciuto'
+      alert('Errore durante l\'aggiunta dell\'articolo: ' + errorMessage)
+    }
+  }
 }
 </script>
 
@@ -455,5 +515,27 @@ textarea {
   color: var(--primary-light);
   font-style: italic;
   border-top: 1px solid var(--primary-light);
+}
+.visibility-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  cursor: pointer;
+}
+
+.toggle-text {
+  font-size: 1.1rem;
+  color: var(--on-surface);
 }
 </style> 

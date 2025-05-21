@@ -1,41 +1,60 @@
 <?php
-require_once 'cors.php';
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
 require_once 'connection.php';
 
-$conn = connection();
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Get data from POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    // Validate input
     if (empty($username) || empty($password)) {
-        echo json_encode(['success' => false, 'message' => 'Username e password sono obbligatori']);
-        exit;
+        http_response_code(400);
+        echo 'Username and password are required';
+        exit();
     }
 
-    // Hash password
-    $password = hash('sha256', $password);
+    $conn = connection();
+
+    // da aggiungere salt
+    $password = hash('sha256', $password);  
 
     // Check credentials
-    $sql = "SELECT * FROM utenti WHERE ute_username = ? AND ute_password = ?";
+    $sql = "SELECT ute_id, ute_username, ute_saldo FROM utenti WHERE ute_username = ? AND ute_password = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param('ss', $username, $password);
     $stmt->execute();
     $result = $stmt->get_result();
 
-    if (mysqli_num_rows($result) > 0) {
-        $user = mysqli_fetch_assoc($result);
-        // Remove sensitive data
-        unset($user['ute_password']);
-        echo json_encode([
-            'success' => true,
-            'message' => 'Login effettuato con successo',
-            'user' => $user
-        ]);
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+        
+        // Distruggi la sessione esistente se presente
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_unset();
+            session_destroy();
+        }
+        
+        // Crea una nuova sessione
+        session_start();
+        session_regenerate_id(true);
+        
+        // Imposta i dati della sessione
+        $_SESSION['user_id'] = $user['ute_id'];
+        $_SESSION['username'] = $user['ute_username'];
+        $_SESSION['last_activity'] = time();
+        
+        echo 'success';
     } else {
-        echo json_encode(['success' => false, 'message' => 'Username o password non validi']);
+        http_response_code(401);
+        echo 'Invalid credentials';
     }
+
+    $stmt->close();
+    $conn->close();
+} else {
+    http_response_code(405);
+    echo 'Method not allowed';
 }
 ?>
