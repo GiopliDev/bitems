@@ -84,7 +84,7 @@ function getItemsByUserId($userId){
     utenti.ute_rep
     FROM articoli
     INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id
-    WHERE articoli.art_ute_id = ? AND articoli.art_status != 'N'";
+    WHERE articoli.art_ute_id = ? AND articoli.isPrivato = 0";
 
     $stmt = $conn->prepare($sql);
     $stmt->bind_param('i', $userId);
