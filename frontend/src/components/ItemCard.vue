@@ -6,7 +6,10 @@
     <div class="item-body">
       <div class="item-title">{{ item.itemName }}</div>
       <div class="item-meta">
-        <span class="game-badge">{{ item.gameName }}</span>
+        <div class="item-badges">
+          <span class="game-badge">{{ item.gameName }}</span>
+          <span class="category-badge">{{ item.category }}</span>
+        </div>
         <span class="item-price">{{ item.price }} €</span>
       </div>
       <div class="item-tags">
@@ -90,9 +93,24 @@ function goToDetail() {
   align-items: center;
   margin-bottom: 0.2rem;
 }
+.item-badges {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
 .game-badge {
   background: var(--primary-light);
   color: var(--on-primary);
+  font-weight: 600;
+  font-size: 0.98rem;
+  padding: 0.18rem 0.8rem;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+  opacity: 0.92;
+}
+.category-badge {
+  background: var(--secondary);
+  color: #18181c;
   font-weight: 600;
   font-size: 0.98rem;
   padding: 0.18rem 0.8rem;

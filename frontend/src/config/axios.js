@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-    baseURL: 'http://localhost/bitems',
+    baseURL: 'http://localhost',
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'

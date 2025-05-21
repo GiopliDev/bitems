@@ -1,25 +1,41 @@
 <?php
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+require_once 'cors.php';
+require_once 'connection.php';
 
-include 'connection.php';
+$conn = connection();
 
-if($_SERVER['REQUEST_METHOD'] == 'POST'){
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    // Get data from POST
+    $username = $_POST['username'] ?? '';
+    $password = $_POST['password'] ?? '';
 
-        $name = $data['name'];
-        //password hashata con sha256
-        $password = hash('sha256', $data['password']);
-
-        $sql = "SELECT * FROM users WHERE name = ? AND password = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param('ss', $name, $password);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if(mysqli_num_rows($result) > 0){
-            echo json_encode(['success' => 'Login effettuato con successo']);
-        }else{
-            echo json_encode(['error' => 'Credenziali non valide', 'code' => 3]); //codice 3 per credenziali non valide
-        }
+    // Validate input
+    if (empty($username) || empty($password)) {
+        echo json_encode(['success' => false, 'message' => 'Username e password sono obbligatori']);
+        exit;
     }
+
+    // Hash password
+    $password = hash('sha256', $password);
+
+    // Check credentials
+    $sql = "SELECT * FROM utenti WHERE ute_username = ? AND ute_password = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param('ss', $username, $password);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if (mysqli_num_rows($result) > 0) {
+        $user = mysqli_fetch_assoc($result);
+        // Remove sensitive data
+        unset($user['ute_password']);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Login effettuato con successo',
+            'user' => $user
+        ]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Username o password non validi']);
+    }
+}
 ?>

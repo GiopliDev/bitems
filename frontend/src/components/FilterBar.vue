@@ -103,8 +103,8 @@ const createTagButton = ref(false)
 // Load games and categories on mount
 onMounted(async () => {
   try {
-    const gamesRes = await axios.get('frontend/backend/getCatalogo.php', { params: { action: 'getGames' } })
-    const categoriesRes = await axios.get('frontend/backend/getCatalogo.php', { params: { action: 'getCategories' } })
+    const gamesRes = await axios.get('/bitems/frontend/backend/getCatalogo.php', { params: { action: 'getGames' } })
+    const categoriesRes = await axios.get('/bitems/frontend/backend/getCatalogo.php', { params: { action: 'getCategories' } })
     games.value = gamesRes.data
     categories.value = categoriesRes.data
   } catch (error) {
@@ -115,7 +115,7 @@ onMounted(async () => {
 // watch ha la stessa funzione di observable su angular 
 watch(tagSearch, async (newValue) => {
   if (newValue.length >= 3) {
-    const response = await axios.get('frontend/backend/getCatalogo.php', {
+    const response = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
       params: { 
         action: 'searchTags',
         query: newValue
@@ -146,7 +146,7 @@ function addTag(tag: string) {
 }
 
 async function createTag() {
-  const response = await axios.get('frontend/backend/getCatalogo.php', {
+  const response = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
     params: {
       action: 'createTag',
       tag: tagSearch.value
@@ -161,7 +161,7 @@ function removeTag(tag: string) {
 //NOTA BENE: se viene composto l url con i parametri e poi viene aggiornata la pagina non funziona,va fatta una richiesta con axios e poi popolare con le card
 async function apply() {
   try {
-    const response = await axios.get('frontend/backend/getCatalogo.php', {
+    const response = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
       params: {
         action: 'getCatalogoFiltrato',
         gameName: filters.game,

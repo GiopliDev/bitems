@@ -1,4 +1,5 @@
 <?php
+require_once 'cors.php';
 //get di tutti gli oggeti divisi in sezioni:
 //calcolare quelli recenti
 //calcolare quelli in trending
@@ -8,10 +9,6 @@
 
 //get di tutti gli oggetti applicando una query sull url
 include 'connection.php';
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-
 
 if($_SERVER['REQUEST_METHOD'] == 'GET'){
     //se è solo get è nell url non c'è una query mostro tutte le sezioni
@@ -108,15 +105,17 @@ function getCatalogoDivisoInSezioni(){
                 articoli.art_titolo itemName,
                 articoli.art_prezzoUnitario price,
                 articoli.art_qtaDisp qty,
-                articoli.art_descrizione description,
+                articoli.art_descrizione as description,
                 articoli.art_timestamp createdAt,
-                articoli.art_status status,
+                articoli.art_status as status,
                 utenti.ute_username user,
                 utenti.ute_rep userRep,
-                giochiaffiliati.gio_nome gameName
+                giochiaffiliati.gio_nome gameName,
+                tipologie.tip_nome category
                 FROM articoli 
                 INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id 
                 INNER JOIN giochiaffiliati ON articoli.art_gio_id = giochiaffiliati.gio_id
+                INNER JOIN tipologie ON articoli.art_tip_id = tipologie.tip_id
                 WHERE articoli.art_gio_id = ? AND articoli.art_status != 'N'
                 ORDER BY articoli.art_timestamp DESC
                 LIMIT 4";
@@ -160,10 +159,12 @@ function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAv
             articoli.art_status as status,
             utenti.ute_username user,
             utenti.ute_rep userRep,
+            tipologie.tip_nome category,
             giochiaffiliati.gio_nome gameName
             FROM articoli 
             INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id 
             INNER JOIN giochiaffiliati ON articoli.art_gio_id = giochiaffiliati.gio_id
+            INNER JOIN tipologie ON articoli.art_tip_id = tipologie.tip_id
             WHERE articoli.art_status != 'N'";
     
     $types = "";

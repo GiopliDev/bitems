@@ -42,6 +42,26 @@ const router = createRouter({
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
     },
+    {
+      path: '/chi-siamo',
+      name: 'chi-siamo',
+      component: () => import('../views/ChiSiamoView.vue'),
+    },
+    {
+      path: '/trending',
+      name: 'trending',
+      component: () => import('../views/TrendingView.vue'),
+    },
+    {
+      path: '/history',
+      name: 'history',
+      component: () => import('../views/HistoryView.vue'),
+    },
+    {
+      path: '/bookmarks',
+      name: 'bookmarks',
+      component: () => import('../views/BookmarksView.vue'),
+    },
   ],
 })
 

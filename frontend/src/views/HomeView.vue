@@ -25,7 +25,7 @@ const categories = [
     label: 'Trending Items',
     emoji: '⭐',
     color: '#ffd600',
-    to: '/trending'
+    to: { path: '/catalogo', query: { itemType: 'trending' } }
   },
   {
     label: 'Placeholder',

@@ -1,8 +1,8 @@
 <template>
   <aside class="user-sidebar">
     <div class="user-info">
-      <img :src="user.avatar || 'https://via.placeholder.com/54'" alt="User Avatar" class="avatar">
-      <h3>{{ user.username }}</h3>
+      <img :src="user?.avatar || 'https://via.placeholder.com/54'" alt="User Avatar" class="avatar">
+      <h3>{{ user?.username || 'User' }}</h3>
     </div>
     <nav class="sidebar-menu">
       <router-link to="/profile" class="sidebar-link" active-class="active">Profile</router-link>

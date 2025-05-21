@@ -43,7 +43,7 @@ function handleFiltersApplied(filteredData: any[]) {
 }
 
 onMounted(() => {
-  axios.get('frontend/backend/getCatalogo.php',{params: {action: 'getCatalogoDivisoInSezioni'}}).then((response: { data: any }) => {
+  axios.get('/bitems/frontend/backend/getCatalogo.php',{params: {action: 'getCatalogoDivisoInSezioni'}}).then((response: { data: any }) => {
     catalogo.value = response.data.data
     itemsByGame.value = response.data.data
     console.log('Catalogo:', catalogo.value)

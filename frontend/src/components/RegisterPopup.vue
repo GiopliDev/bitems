@@ -8,6 +8,8 @@
         <input type="text" v-model="nome" required />
         <label>Cognome</label>
         <input type="text" v-model="cognome" required />
+        <label>Nickname</label>
+        <input type="text" v-model="nickname" required />
         <label>Email</label>
         <input type="email" v-model="email" required />
         <label>Password</label>
@@ -20,26 +22,76 @@
         <a href="#" @click.prevent="switchToLogin">Accedi qui</a>
       </div>
     </div>
+    <CustomAlert
+      :show="showAlert"
+      :title="alertTitle"
+      :subtitle="alertSubtitle"
+      @close="closeAlert"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue';
-import axios from 'axios';
+import axios from '@/config/axios';
+import CustomAlert from './CustomAlert.vue';
+
 const emit = defineEmits(['close', 'switchToLogin'])
 const nome = ref('')
 const cognome = ref('')
+const nickname = ref('')
 const email = ref('')
 const password = ref('')
+
+// Alert state
+const showAlert = ref(false)
+const alertTitle = ref('')
+const alertSubtitle = ref('')
+
 function close() { emit('close') }
 function switchToLogin() { emit('switchToLogin') }
-function onSubmit() {
-  axios.post('http://localhost/backend/register.php', {
-    nome: nome.value,
-    cognome: cognome.value,
-    email: email.value,
-    password: password.value
-  })
+
+function showCustomAlert(title, subtitle) {
+  alertTitle.value = title
+  alertSubtitle.value = subtitle
+  showAlert.value = true
+}
+
+function closeAlert() {
+  showAlert.value = false
+}
+
+async function onSubmit() {
+  try {
+    const formData = new FormData();
+    formData.append('nome', nome.value);
+    formData.append('cognome', cognome.value);
+    formData.append('nickname', nickname.value);
+    formData.append('email', email.value);
+    formData.append('password', password.value);
+
+    const response = await axios.post('/bitems/frontend/backend/register.php', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    if (response.data.success) {
+      showCustomAlert('Registrazione completata', 'Benvenuto su BitItems! Ora puoi effettuare il login.')
+      setTimeout(() => {
+        close()
+        switchToLogin()
+      }, 2000)
+    } else {
+      showCustomAlert('Errore', response.data.message || 'Si è verificato un errore durante la registrazione.')
+    }
+  } catch (error) {
+    console.error('Registration error:', error)
+    showCustomAlert(
+      'Errore di registrazione',
+      error.response?.data?.message || 'Si è verificato un errore durante la registrazione. Riprova più tardi.'
+    )
+  }
 }
 </script>
 <style scoped>
@@ -133,4 +185,36 @@ hr {
   transition: color 0.2s;
 }
 .footer a:hover { color: var(--secondary, #03dac6); }
+.custom-alert {
+  background: radial-gradient(ellipse at top left, #1e2a2f 0%, #18181c 100%);
+  border: 2px solid var(--secondary, #03dac6);
+  border-radius: 20px;
+  padding: 2.5rem 2rem 1.5rem 2rem;
+  box-shadow: 0 8px 32px #000a;
+}
+
+.custom-alert-title {
+  color: var(--primary-light, #bb86fc);
+  font-weight: 700;
+}
+
+.custom-alert-subtitle {
+  color: var(--on-surface, #fff);
+}
+
+.custom-alert-button {
+  background: var(--secondary, #03dac6);
+  color: #18181c;
+  border: none;
+  padding: 0.8rem 2rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.custom-alert-button:hover {
+  background: var(--primary-light, #bb86fc);
+}
 </style> 

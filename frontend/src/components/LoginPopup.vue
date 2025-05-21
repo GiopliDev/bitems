@@ -16,29 +16,70 @@
         <a href="#" @click.prevent="switchToRegister">Registrati qui</a>
       </div>
     </div>
+    <CustomAlert
+      :show="showAlert"
+      :title="alertTitle"
+      :subtitle="alertSubtitle"
+      @close="closeAlert"
+    />
   </div>
 </template>
 
 <script setup>
-import axios from 'axios';
+import axios from '@/config/axios';
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import CustomAlert from './CustomAlert.vue';
+
 const emit = defineEmits(['close', 'switchToRegister', 'login-success'])
 const username = ref('')
 const password = ref('')
+const router = useRouter()
+
+// Alert state
+const showAlert = ref(false)
+const alertTitle = ref('')
+const alertSubtitle = ref('')
+
 function close() { emit('close') }
 function switchToRegister() { emit('switchToRegister') }
 
-function onSubmit() {
-  axios.post('http://localhost/path/to/backend/api.php', {
-    username: username.value,
-    password: password.value
-  })
-    .then(response => {
-      console.log(response.data); 
-    })
-    .catch(error => {
-      console.error(error);
+function showCustomAlert(title, subtitle) {
+  alertTitle.value = title
+  alertSubtitle.value = subtitle
+  showAlert.value = true
+}
+
+function closeAlert() {
+  showAlert.value = false
+}
+
+async function onSubmit() {
+  try {
+    const formData = new FormData();
+    formData.append('username', username.value);
+    formData.append('password', password.value);
+
+    const response = await axios.post('/bitems/frontend/backend/login.php', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
     });
+
+    if (response.data.success) {
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      emit('login-success', response.data.user);
+      close();
+    } else {
+      showCustomAlert('Errore', response.data.message || 'Credenziali non valide');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    showCustomAlert(
+      'Errore di login',
+      error.response?.data?.message || 'Si è verificato un errore durante il login. Riprova più tardi.'
+    );
+  }
 }
 </script>
 

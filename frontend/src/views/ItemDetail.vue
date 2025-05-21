@@ -73,24 +73,33 @@
           <span>{{ orderQty }}</span>
           <button @click="orderQty < item.art_qtaDisp && orderQty++">+</button>
         </div>
-        <button class="main-btn" @click="showPaymentPopup = true">Procedi con l'ordine</button>
+        <button v-if="isLoggedIn" class="main-btn" @click="showPaymentPopup = true">Procedi con l'ordine</button>
+        <button v-else class="main-btn" @click="showLoginAlert">Procedi con l'ordine</button>
       </div>
     </div>
   </div>
   <PaymentPopup v-if="showPaymentPopup" @close="showPaymentPopup = false" />
+  <CustomAlert
+    v-if="showAlert"
+    :show="showAlert"
+    :title="alertTitle"
+    :subtitle="alertSubtitle"
+    @close="closeAlert"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import axios from '@/config/axios'
 import PaymentPopup from '../components/PaymentPopup.vue'
+import CustomAlert from '../components/CustomAlert.vue'
 
 interface Review {
   rec_id: number
   rec_art_id: number
   rec_ute_id: number
-  rec_voto: string
+  rec_voto: number
   rec_dex: string
   ute_username: string
 }
@@ -112,6 +121,7 @@ interface Item {
 }
 
 const route = useRoute()
+const router = useRouter()
 const item = ref<Item | null>(null)
 const imageIndex = ref(0)
 const orderQty = ref(1)
@@ -119,6 +129,17 @@ const currentImage = ref('')
 const showPaymentPopup = ref(false)
 const generalLikes = ref(10)
 const generalDislikes = ref(2)
+
+// Alert state
+const showAlert = ref(false)
+const alertTitle = ref('')
+const alertSubtitle = ref('')
+
+// Check if user is logged in
+const isLoggedIn = computed(() => {
+  // You can replace this with your actual authentication check
+  return localStorage.getItem('user') !== null
+})
 
 onMounted(async () => {
   try {
@@ -148,6 +169,26 @@ function goToImage(idx: number) {
   if (!item.value?.images?.length) return
   imageIndex.value = idx
   currentImage.value = item.value.images[imageIndex.value]
+}
+
+function showCustomAlert(title: string, subtitle: string) {
+  alertTitle.value = title
+  alertSubtitle.value = subtitle
+  showAlert.value = true
+}
+
+function closeAlert() {
+  showAlert.value = false
+}
+
+function showLoginAlert() {
+  showCustomAlert(
+    'Accesso richiesto',
+    'Per procedere con l\'ordine è necessario effettuare l\'accesso. Verrai reindirizzato alla pagina di login.'
+  )
+  setTimeout(() => {
+    router.push('/login')
+  }, 2000)
 }
 </script>
 

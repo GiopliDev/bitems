@@ -134,8 +134,8 @@ const form = ref<FormData>({
 // Carica games e categories al mount
 onMounted(async () => {
   try {
-    const gamesRes = await axios.get('frontend/backend/getCatalogo.php', { params: { action: 'getGames' } })
-    const categoriesRes = await axios.get('frontend/backend/getCatalogo.php', { params: { action: 'getCategories' } })
+    const gamesRes = await axios.get('/bitems/frontend/backend/getCatalogo.php', { params: { action: 'getGames' } })
+    const categoriesRes = await axios.get('/bitems/frontend/backend/getCatalogo.php', { params: { action: 'getCategories' } })
     
     if (gamesRes.data && Array.isArray(gamesRes.data)) {
       games.value = gamesRes.data
@@ -155,7 +155,7 @@ onMounted(async () => {
 watch(tagInput, async (newValue) => {
   if (newValue.length >= 3) {
     try {
-      const response = await axios.get('frontend/backend/getCatalogo.php', {
+      const response = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
         params: { 
           action: 'searchTags',
           query: newValue
@@ -182,7 +182,7 @@ watch(tagInput, async (newValue) => {
 
 async function createTag() {
   try {
-    await axios.get('frontend/backend/getCatalogo.php', {
+    await axios.get('/bitems/frontend/backend/getCatalogo.php', {
       params: {
         action: 'createTag',
         tag: tagInput.value
@@ -241,7 +241,7 @@ function onTagInput() {
 
 async function searchTags() {
   try {
-    const response = await axios.get('frontend/backend/getCatalogo.php', {
+    const response = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
       params: { 
         action: 'searchTags',
         query: tagInput.value
