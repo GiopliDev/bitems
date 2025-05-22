@@ -1,4 +1,5 @@
 <?php
+//php generale per funzioni comuni e ricorrenti (non messe su getCatalogo per comodita)
 require_once 'connection.php';
 
 //prende immagine random per l'articolo
@@ -93,6 +94,7 @@ function handleImageUpload($file, $conn) {
 }
 
 //relazione many to many tra images e articoli per comodita
+//politica di eliminazione CASCADE !!!!!!!!!
 function linkImageToItem($itemId, $imageId, $conn) {
     $sql = "INSERT INTO images_articoli (art_id, img_id) VALUES (?, ?)";
     $stmt = $conn->prepare($sql);

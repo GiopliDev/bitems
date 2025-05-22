@@ -1,6 +1,34 @@
 <?php
 require_once 'cors.php';
 include 'connection.php';
+require_once 'utils.php';
+
+function getItemDetails($art_id) {
+    $conn = connection();
+    $sql = "SELECT a.*, 
+            g.gio_nome as game_name,
+            t.tip_nome as category_name,
+            u.ute_username as seller_name,
+            u.ute_rep as seller_rep,
+            GROUP_CONCAT(DISTINCT tg.tag_nome) as tags
+            FROM articoli a
+            JOIN giochiaffiliati g ON a.art_gio_id = g.gio_id
+            JOIN tipologie t ON a.art_tip_id = t.tip_id
+            JOIN utenti u ON a.art_ute_id = u.ute_id
+            LEFT JOIN tags_articoli ta ON a.art_id = ta.art_id
+            LEFT JOIN tags tg ON ta.tag_id = tg.tag_id
+            WHERE a.art_id = ?
+            GROUP BY a.art_id";
+    
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param('i', $art_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $item = $result->fetch_assoc();
+    $stmt->close();
+    
+    return $item ? processItemData($item) : null;
+}
 
 if($_SERVER['REQUEST_METHOD'] == 'GET') {
     if(!isset($_GET['id'])) {
@@ -10,41 +38,7 @@ if($_SERVER['REQUEST_METHOD'] == 'GET') {
     }
 
     $itemId = $_GET['id'];
-    $conn = connection();
-
-    // Get current user ID from session
-    session_start();
-    $currentUserId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
-
-    // Get item data with seller info and images
-    $sql = "SELECT a.*, 
-            g.gio_nome as game_name, 
-            t.tip_nome as category_name,
-            u.ute_username as seller_name,
-            u.ute_rep as seller_rep,
-            u.ute_img_id as seller_img_id,
-            i.img_url as seller_img_url,
-            GROUP_CONCAT(DISTINCT tg.tag_nome) as tags,
-            GROUP_CONCAT(DISTINCT img.img_url) as images,
-            (SELECT COUNT(*) FROM recensioni WHERE rec_art_id = a.art_id AND rec_voto = 1) as likes,
-            (SELECT COUNT(*) FROM recensioni WHERE rec_art_id = a.art_id AND rec_voto = 0) as dislikes
-            FROM articoli a
-            LEFT JOIN giochiaffiliati g ON a.art_gio_id = g.gio_id
-            LEFT JOIN tipologie t ON a.art_tip_id = t.tip_id
-            LEFT JOIN utenti u ON a.art_ute_id = u.ute_id
-            LEFT JOIN images i ON u.ute_img_id = i.img_id
-            LEFT JOIN tags_articoli ta ON a.art_id = ta.art_id
-            LEFT JOIN tags tg ON ta.tag_id = tg.tag_id
-            LEFT JOIN images_articoli ia ON a.art_id = ia.art_id
-            LEFT JOIN images img ON ia.img_id = img.img_id
-            WHERE a.art_id = ?
-            GROUP BY a.art_id";
-
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $itemId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $item = $result->fetch_assoc();
+    $item = getItemDetails($itemId);
 
     if(!$item) {
         http_response_code(404);
@@ -52,9 +46,9 @@ if($_SERVER['REQUEST_METHOD'] == 'GET') {
         exit;
     }
 
-    // Convert comma-separated strings to arrays
-    $item['tags'] = $item['tags'] ? explode(',', $item['tags']) : [];
-    $item['images'] = $item['images'] ? explode(',', $item['images']) : [];
+    // Get current user ID from session
+    session_start();
+    $currentUserId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
     
     // Add isOwner flag based on user session
     $item['isOwner'] = $currentUserId && $currentUserId == $item['art_ute_id'];
