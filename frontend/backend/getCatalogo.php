@@ -11,30 +11,38 @@ require_once 'cors.php';
 include 'connection.php';
 
 if($_SERVER['REQUEST_METHOD'] == 'GET'){
-    //se è solo get è nell url non c'è una query mostro tutte le sezioni
-    //se gameName = ? mostro tutti gli oggetti di quella sezione
     if(isset($_GET['action'])){
-        if($_GET['action'] == 'getCategories'){
-            echo getCategories();
-        }else if($_GET['action'] == 'getGames'){
-            echo getGames();
-        }else if($_GET['action'] == 'getCatalogoDivisoInSezioni'){
-            echo getCatalogoDivisoInSezioni();
-        }else if($_GET['action'] == 'getCatalogoFiltrato'){
-            //query con i filtri,se i filtri sono vuoti applicare default
-            $gameName = isset($_GET['gameName']) ? $_GET['gameName'] : '';
-            $category = isset($_GET['category']) ? $_GET['category'] : '';
-            $minPrice = isset($_GET['minPrice']) ? $_GET['minPrice'] : 0;
-            $maxPrice = isset($_GET['maxPrice']) ? $_GET['maxPrice'] : 20000;
-            $onlyAvailable = isset($_GET['onlyAvailable']) ? $_GET['onlyAvailable'] : false;
-            $tags = isset($_GET['tags']) ? $_GET['tags'] : [];
-            echo getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAvailable, $tags);
-        }else if($_GET['action'] == 'searchTags'){
-            $str = isset($_GET['query']) ? $_GET['query'] : '';
-            echo findTags($str);
-        }else if($_GET['action'] == 'createTag'){
-            $tag = isset($_GET['tag']) ? $_GET['tag'] : '';
-            createTag($tag);
+        switch($_GET['action']) {
+            case 'getCategories':
+                echo getCategories();
+                break;
+            case 'getGames':
+                echo getGames();
+                break;
+            case 'getCatalogoDivisoInSezioni':
+                echo getCatalogoDivisoInSezioni();
+                break;
+            case 'getCatalogoFiltrato':
+                $gameName = $_GET['gameName'] ?? '';
+                $category = $_GET['category'] ?? '';
+                $minPrice = floatval($_GET['minPrice'] ?? 0);
+                $maxPrice = floatval($_GET['maxPrice'] ?? 20000);
+                $onlyAvailable = filter_var($_GET['onlyAvailable'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                $tags = $_GET['tags'] ?? [];
+                echo getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAvailable, $tags);
+                break;
+            case 'searchTags':
+                $str = $_GET['query'] ?? '';
+                echo findTags($str);
+                break;
+            case 'createTag':
+                $tag = $_GET['tag'] ?? '';
+                createTag($tag);
+                break;
+            default:
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid action']);
+                break;
         }
     }
 }
@@ -98,37 +106,37 @@ function getCatalogoDivisoInSezioni(){
     $sql = "SELECT gio_id, gio_nome FROM giochiaffiliati ORDER BY gio_nome";
     $result = $conn->query($sql);
     
-    // Per ogni gioco, prendiamo i primi 4 articoli
+    // Per ogni gioco, prendiamo i primi 5 articoli
     while($game = $result->fetch_assoc()) {
         $sql = "SELECT 
-                articoli.art_id,
-                articoli.art_titolo,
-                articoli.art_prezzoUnitario,
-                articoli.art_qtaDisp,
-                articoli.art_descrizione,
-                articoli.art_timestamp,
-                articoli.art_isPrivato,
-                giochiaffiliati.gio_nome as game_name,
-                tipologie.tip_nome as category_name,
-                utenti.ute_username as seller_name,
-                utenti.ute_rep as seller_rep,
+                a.art_id,
+                a.art_titolo,
+                a.art_prezzoUnitario,
+                a.art_qtaDisp,
+                a.art_descrizione,
+                a.art_timestamp,
+                a.art_isPrivato,
+                g.gio_nome as game_name,
+                t.tip_nome as category_name,
+                u.ute_username as seller_name,
+                u.ute_rep as seller_rep,
                 GROUP_CONCAT(DISTINCT tg.tag_nome) as tags,
                 (SELECT img.img_url 
                  FROM images_articoli ia 
                  JOIN images img ON ia.img_id = img.img_id 
-                 WHERE ia.art_id = articoli.art_id 
-                 ORDER BY RAND() 
+                 WHERE ia.art_id = a.art_id 
                  LIMIT 1) as image
-                FROM articoli 
-                INNER JOIN giochiaffiliati ON articoli.art_gio_id = giochiaffiliati.gio_id
-                INNER JOIN tipologie ON articoli.art_tip_id = tipologie.tip_id
-                INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id
-                LEFT JOIN tags_articoli ta ON articoli.art_id = ta.art_id
+                FROM articoli a
+                JOIN giochiaffiliati g ON a.art_gio_id = g.gio_id
+                JOIN tipologie t ON a.art_tip_id = t.tip_id
+                JOIN utenti u ON a.art_ute_id = u.ute_id
+                LEFT JOIN tags_articoli ta ON a.art_id = ta.art_id
                 LEFT JOIN tags tg ON ta.tag_id = tg.tag_id
-                WHERE articoli.art_gio_id = ? AND articoli.art_isPrivato = 0
-                GROUP BY articoli.art_id
-                ORDER BY articoli.art_timestamp DESC
-                LIMIT 4";
+                WHERE a.art_gio_id = ? 
+                AND a.art_isPrivato = 0
+                GROUP BY a.art_id
+                ORDER BY a.art_timestamp DESC
+                LIMIT 5";
         
         $stmt = $conn->prepare($sql);
         $stmt->bind_param('i', $game['gio_id']);
@@ -137,8 +145,22 @@ function getCatalogoDivisoInSezioni(){
         
         $gameItems = [];
         while($item = $items->fetch_assoc()) {
-            $item['tags'] = $item['tags'] ? explode(',', $item['tags']) : [];
-            $gameItems[] = $item;
+            $formattedItem = [
+                'art_id' => (int)$item['art_id'],
+                'art_titolo' => $item['art_titolo'],
+                'art_prezzoUnitario' => (float)$item['art_prezzoUnitario'],
+                'art_qtaDisp' => (int)$item['art_qtaDisp'],
+                'art_descrizione' => $item['art_descrizione'],
+                'art_timestamp' => $item['art_timestamp'],
+                'art_isPrivato' => (bool)$item['art_isPrivato'],
+                'game_name' => $item['game_name'],
+                'category_name' => $item['category_name'],
+                'seller_name' => $item['seller_name'],
+                'seller_rep' => (int)$item['seller_rep'],
+                'tags' => $item['tags'] ? explode(',', $item['tags']) : [],
+                'image' => $item['image'] ?: 'default.jpg'
+            ];
+            $gameItems[] = $formattedItem;
         }
         
         if (!empty($gameItems)) {
@@ -146,83 +168,80 @@ function getCatalogoDivisoInSezioni(){
         }
     }
     
-    return json_encode(['data' => $catalogo]);
+    // Debug log
+    error_log('Catalogo data: ' . json_encode($catalogo));
+    
+    return json_encode(['success' => true, 'data' => $catalogo]);
 }
 
 function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAvailable, $tags){
     $conn = connection();
     
-    // Base query
     $sql = "SELECT 
-            articoli.art_id,
-            articoli.art_titolo,
-            articoli.art_prezzoUnitario,
-            articoli.art_qtaDisp,
-            articoli.art_descrizione,
-            articoli.art_timestamp,
-            articoli.art_isPrivato,
-            giochiaffiliati.gio_nome as game_name,
-            tipologie.tip_nome as category_name,
-            utenti.ute_username as seller_name,
-            utenti.ute_rep as seller_rep,
+            a.art_id,
+            a.art_titolo,
+            a.art_prezzoUnitario,
+            a.art_qtaDisp,
+            a.art_descrizione,
+            a.art_timestamp,
+            a.art_isPrivato,
+            g.gio_nome as game_name,
+            t.tip_nome as category_name,
+            u.ute_username as seller_name,
+            u.ute_rep as seller_rep,
             GROUP_CONCAT(DISTINCT tg.tag_nome) as tags,
             (SELECT img.img_url 
              FROM images_articoli ia 
              JOIN images img ON ia.img_id = img.img_id 
-             WHERE ia.art_id = articoli.art_id 
-             ORDER BY RAND() 
+             WHERE ia.art_id = a.art_id 
              LIMIT 1) as image
-            FROM articoli 
-            INNER JOIN giochiaffiliati ON articoli.art_gio_id = giochiaffiliati.gio_id
-            INNER JOIN tipologie ON articoli.art_tip_id = tipologie.tip_id
-            INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id
-            LEFT JOIN tags_articoli ta ON articoli.art_id = ta.art_id
+            FROM articoli a
+            JOIN giochiaffiliati g ON a.art_gio_id = g.gio_id
+            JOIN tipologie t ON a.art_tip_id = t.tip_id
+            JOIN utenti u ON a.art_ute_id = u.ute_id
+            LEFT JOIN tags_articoli ta ON a.art_id = ta.art_id
             LEFT JOIN tags tg ON ta.tag_id = tg.tag_id
-            WHERE articoli.art_isPrivato = 0";
+            WHERE a.art_isPrivato = 0";
     
     $types = "";
     $values = [];
     
-    // Game filter
     if (!empty($gameName)) {
-        $sql .= " AND giochiaffiliati.gio_nome = ?";
+        $sql .= " AND g.gio_nome = ?";
         $types .= "s";
         $values[] = $gameName;
     }
     
-    // Category filter
     if (!empty($category)) {
-        $sql .= " AND tipologie.tip_nome = ?";
+        $sql .= " AND t.tip_nome = ?";
         $types .= "s";
         $values[] = $category;
     }
     
-    // Price range filter
     if ($minPrice > 0) {
-        $sql .= " AND articoli.art_prezzoUnitario >= ?";
+        $sql .= " AND a.art_prezzoUnitario >= ?";
         $types .= "d";
         $values[] = $minPrice;
     }
     
     if ($maxPrice < 20000) {
-        $sql .= " AND articoli.art_prezzoUnitario <= ?";
+        $sql .= " AND a.art_prezzoUnitario <= ?";
         $types .= "d";
         $values[] = $maxPrice;
     }
     
-    // Availability filter
+    // Solo se onlyAvailable è true, filtriamo per articoli disponibili
     if ($onlyAvailable) {
-        $sql .= " AND articoli.art_qtaDisp > 0";
+        $sql .= " AND a.art_qtaDisp > 0";
     }
     
-    // Tags filter
     if (!empty($tags)) {
-        $tagArray = explode(',', $tags);
+        $tagArray = is_array($tags) ? $tags : explode(',', $tags);
         foreach ($tagArray as $tag) {
             $sql .= " AND EXISTS (
                 SELECT 1 FROM tags_articoli ta 
                 INNER JOIN tags t ON ta.tag_id = t.tag_id 
-                WHERE ta.art_id = articoli.art_id 
+                WHERE ta.art_id = a.art_id 
                 AND t.tag_nome = ?
             )";
             $types .= "s";
@@ -230,7 +249,7 @@ function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAv
         }
     }
     
-    $sql .= " GROUP BY articoli.art_id ORDER BY articoli.art_timestamp DESC";
+    $sql .= " GROUP BY a.art_id ORDER BY a.art_timestamp DESC";
     
     $stmt = $conn->prepare($sql);
     if (!empty($values)) {
@@ -242,30 +261,10 @@ function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAv
     $items = [];
     while($row = $result->fetch_assoc()) {
         $row['tags'] = $row['tags'] ? explode(',', $row['tags']) : [];
+        $row['image'] = $row['image'] ?: 'default.jpg';
         $items[] = $row;
     }
     
-    return json_encode(['data' => $items]);
+    return json_encode(['success' => true, 'data' => $items]);
 }
-
-function getCatalogoRecenti(){
-    $conn = connection();
-
-    $sql = "SELECT * FROM articoli ORDER BY art_timestamp DESC";
-    $stmt = $conn->prepare($sql);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    return json_encode($result);
-}
-
-function getCatalogoTrending(){ //calcolo in base al numero di acquisti al giorno controllati su cronologiaacquisti
-    $conn = connection();
-
-    $sql = "SELECT * FROM articoli ORDER BY art_valutazione DESC";  
-    $stmt = $conn->prepare($sql);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    return json_encode($result);
-}
-
 ?>

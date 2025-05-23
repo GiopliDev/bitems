@@ -10,7 +10,7 @@
            @keyup.enter="goToItem(item.art_id)">
         <div class="item-image">
           <img 
-            :src="`/bitems/frontend/UploadedImages/${item.imageId}`" 
+            :src="item.imageId ? `/bitems/frontend/UploadedImages/${item.imageId}` : '/default-item.png'" 
             :alt="item.title"
             class="item-img"
           />

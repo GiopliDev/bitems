@@ -8,9 +8,21 @@
         </a>
         <nav class="nav-links">
           <a href="/" class="nav-link">Home</a>
-          <a href="/" class="nav-link">Giochi</a>
+          <div class="dropdown">
+            <button class="nav-link dropdown-btn">Giochi</button>
+            <div class="dropdown-content">
+              <a v-for="game in games" 
+                 :key="game" 
+                 href="#" 
+                 class="dropdown-item"
+                 @click.prevent="filterByGame(game)">
+                {{ game }}
+              </a>
+            </div>
+          </div>
           <a href="/catalogo" class="nav-link">Oggetti Virtuali</a>
           <a href="/top-vendite" class="nav-link">Top Vendite</a>
+          <a v-if="isAdmin" href="/admin" class="nav-link admin">Admin Panel</a>
         </nav>
         <div v-if="user" class="user-info-bar">
           Hi {{ user?.ute_username || 'User' }}!<br>
@@ -25,7 +37,15 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from '@/config/axios'
+
+const router = useRouter()
+const games = ref<string[]>([])
+const isAdmin = ref(false)
+
 defineProps({
   user: {
     type: Object,
@@ -34,6 +54,38 @@ defineProps({
 });
 
 const emit = defineEmits(['show-login', 'show-register']);
+
+async function loadGames() {
+  try {
+    const response = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
+      params: { action: 'getGames' }
+    })
+    games.value = response.data
+  } catch (error) {
+    console.error('Error loading games:', error)
+  }
+}
+
+async function checkAdminStatus() {
+  try {
+    const response = await axios.get('/bitems/frontend/backend/session.php')
+    isAdmin.value = response.data.isAdmin
+  } catch (error) {
+    console.error('Error checking admin status:', error)
+  }
+}
+
+function filterByGame(game: string) {
+  router.push({
+    path: '/catalogo',
+    query: { game }
+  })
+}
+
+onMounted(() => {
+  loadGames()
+  checkAdminStatus()
+})
 </script>
 
 <style scoped>
@@ -157,5 +209,56 @@ header {
   .nav-links, .auth-links {
     display: none;
   }
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--on-surface);
+  transition: color 0.3s;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: var(--surface);
+  min-width: 160px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  z-index: 1;
+  padding: 0.5rem 0;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown-item {
+  color: var(--on-surface);
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  display: block;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: var(--surface-light);
+  color: var(--primary-light);
+}
+
+.nav-link.admin {
+  color: var(--secondary);
+}
+
+.nav-link.admin:hover {
+  color: var(--primary-light);
 }
 </style>

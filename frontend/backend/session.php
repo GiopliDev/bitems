@@ -13,13 +13,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         session_start();
         
         if (isset($_SESSION['user_id'])) {
+            $isAdmin = $_SESSION['user_id'] === 1;
             echo json_encode([
                 'isLoggedIn' => true,
-                'userId' => $_SESSION['user_id']
+                'userId' => $_SESSION['user_id'],
+                'isAdmin' => $isAdmin
             ]);
         } else {
             echo json_encode([
-                'isLoggedIn' => false
+                'isLoggedIn' => false,
+                'isAdmin' => false
             ]);
         }
     } 

@@ -46,8 +46,13 @@
         <span class="dislike">
           👎 {{ item.dislikes || 0 }}
         </span>
-        <button class="bookmark-btn">
-          🔖 Bookmark
+        <button 
+          class="bookmark-btn" 
+          :class="{ 'is-bookmarked': isBookmarked }"
+          @click="addBookmark"
+        >
+          <i class="fas" :class="isBookmarked ? 'fa-bookmark' : 'fa-bookmark-o'"></i>
+          {{ isBookmarked ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti' }}
         </button>
       </div>
       <div class="item-reviews">
@@ -155,6 +160,8 @@ import Review from '../components/Review.vue'
 import AddReview from '../components/AddReview.vue'
 import ImagePopup from '../components/ImagePopup.vue'
 
+//interface per comodita e mantenere gli stessi dati tra php e vue
+
 interface Review {
   rec_id: number
   rec_art_id: number
@@ -193,10 +200,9 @@ const imageIndex = ref(0)
 const orderQty = ref(1)
 const currentImage = ref('')
 const showPaymentPopup = ref(false)
-const generalLikes = ref(10)
-const generalDislikes = ref(2)
 const showEditPopup = ref(false)
 const showFullImage = ref(false)
+const isBookmarked = ref(false)
 
 // Alert state
 const showAlert = ref(false)
@@ -205,7 +211,6 @@ const alertSubtitle = ref('')
 
 // Check if user is logged in
 const isLoggedIn = computed(() => {
-  // You can replace this with your actual authentication check
   return localStorage.getItem('user') !== null
 })
 
@@ -215,20 +220,45 @@ const canReview = ref(false)
 
 onMounted(async () => {
   try {
-    const response = await axios.get(`bitems/frontend/backend/getItem.php?id=${route.query.id}`)
-    item.value = response.data.item
-    if (item.value?.images?.length) {
-      currentImage.value = `/bitems/frontend/UploadedImages/${item.value.images[0]}`
-    }
+    // Get item details
+    const response = await axios.get(`/bitems/frontend/backend/getItem.php?id=${route.query.id}`)
+    if (response.data.success) {
+      item.value = response.data.item
+      
+      // Calcola like e dislike dalle recensioni
+      if (item.value?.recensioni) {
+        item.value.likes = item.value.recensioni.filter(review => review.rec_voto === '1').length
+        item.value.dislikes = item.value.recensioni.filter(review => review.rec_voto === '0').length
+      }
+      
+      // Set current image if there are images
+      if (item.value?.images && item.value.images.length > 0) {
+        currentImage.value = `/bitems/frontend/UploadedImages/${item.value.images[0]}`
+      } else {
+        // If no images found, use default image
+        currentImage.value = '/bitems/frontend/UploadedImages/default.jpg'
+      }
 
-    // Check if user can review
-    const reviewCheck = await axios.get(`/bitems/frontend/backend/checkCanReview.php?itemId=${route.query.id}`)
-    canReview.value = reviewCheck.data.canReview
+      // Check if user can review
+      const reviewCheck = await axios.get(`/bitems/frontend/backend/checkCanReview.php?itemId=${route.query.id}`)
+      canReview.value = reviewCheck.data.canReview
+
+      // Check if item is bookmarked
+      if (isLoggedIn.value) {
+        const bookmarkCheck = await axios.post('/bitems/frontend/backend/bookmarks.php', {
+          action: 'checkBookmark',
+          id_articolo: item.value?.art_id
+        })
+        isBookmarked.value = bookmarkCheck.data.isBookmarked
+      }
+    }
   } catch (error) {
     console.error('Errore nel recupero dei dati:', error)
+    showCustomAlert('Errore', 'Impossibile caricare i dettagli dell\'articolo')
   }
 })
 
+// Funzione per gestire le immagini
 function prevImage() {
   if (!item.value?.images?.length) return
   imageIndex.value = (imageIndex.value - 1 + item.value.images.length) % item.value.images.length
@@ -255,6 +285,31 @@ function showCustomAlert(title: string, subtitle: string) {
 
 function closeAlert() {
   showAlert.value = false
+}
+
+async function addBookmark() {
+  if (!isLoggedIn.value) {
+    showLoginAlert()
+    return
+  }
+
+  try {
+    const response = await axios.post('/bitems/frontend/backend/bookmarks.php', {
+      action: isBookmarked.value ? 'removeBookmark' : 'addBookmark',
+      id_articolo: item.value?.art_id
+    })
+
+    if (response.data.success) {
+      isBookmarked.value = !isBookmarked.value
+      showCustomAlert(
+        isBookmarked.value ? 'Bookmark aggiunto' : 'Bookmark rimosso',
+        isBookmarked.value ? 'L\'articolo è stato aggiunto ai preferiti' : 'L\'articolo è stato rimosso dai preferiti'
+      )
+    }
+  } catch (error) {
+    console.error('Error managing bookmark:', error)
+    showCustomAlert('Errore', 'Impossibile gestire il bookmark')
+  }
 }
 
 function showLoginAlert() {
@@ -310,10 +365,40 @@ function handlePaymentSuccess() {
 
 async function loadItemData() {
   try {
-    const response = await axios.get(`bitems/frontend/backend/getItem.php?id=${route.query.id}`)
-    item.value = response.data.item
+    const response = await axios.get(`/bitems/frontend/backend/getItem.php?id=${route.query.id}`)
+    if (response.data.success) {
+      item.value = response.data.item
+      
+      // Calcola like e dislike dalle recensioni
+      if (item.value?.recensioni) {
+        item.value.likes = item.value.recensioni.filter(review => review.rec_voto === '1').length
+        item.value.dislikes = item.value.recensioni.filter(review => review.rec_voto === '0').length
+      }
+      
+      // Set current image if there are images
+      if (item.value?.images && item.value.images.length > 0) {
+        currentImage.value = `/bitems/frontend/UploadedImages/${item.value.images[0]}`
+      } else {
+        // If no images found, use default image
+        currentImage.value = '/bitems/frontend/UploadedImages/default.jpg'
+      }
+
+      // Check if user can review
+      const reviewCheck = await axios.get(`/bitems/frontend/backend/checkCanReview.php?itemId=${route.query.id}`)
+      canReview.value = reviewCheck.data.canReview
+
+      // Check if item is bookmarked
+      if (isLoggedIn.value) {
+        const bookmarkCheck = await axios.post('/bitems/frontend/backend/bookmarks.php', {
+          action: 'checkBookmark',
+          id_articolo: item.value?.art_id
+        })
+        isBookmarked.value = bookmarkCheck.data.isBookmarked
+      }
+    }
   } catch (error) {
     console.error('Error loading item data:', error)
+    showCustomAlert('Errore', 'Impossibile caricare i dettagli dell\'articolo')
   }
 }
 
@@ -853,17 +938,34 @@ function formatDate(timestamp: string) {
 .bookmark-btn {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  cursor: pointer;
+  gap: 0.5rem;
+  padding: 0.8rem 1.2rem;
+  background: var(--surface-light);
   color: var(--on-surface);
-  font-size: 1.1rem;
-  background: none;
-  border: none;
-  padding: 0.5rem;
-  transition: color 0.2s;
+  border: 2px solid var(--primary-light);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .bookmark-btn:hover {
-  color: var(--primary-light);
+  background: var(--primary-light);
+  color: var(--on-primary);
+}
+
+.bookmark-btn.is-bookmarked {
+  background: var(--primary-light);
+  color: var(--on-primary);
+}
+
+.bookmark-btn.is-bookmarked:hover {
+  background: var(--surface-light);
+  color: var(--on-surface);
+}
+
+.bookmark-btn i {
+  font-size: 1.1rem;
 }
 </style> 
