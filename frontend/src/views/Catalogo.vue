@@ -9,6 +9,37 @@
         {{ error }}
       </div>
       <template v-else>
+        <!-- Sezione Trending -->
+        <section class="catalogo-section">
+          <h3 class="section-title">
+            <span class="trending-icon">🔥</span>
+            In Trend
+          </h3>
+          <div class="catalogo-cards">
+            <ItemCard 
+              v-for="item in trendingItems" 
+              :key="item.art_id" 
+              :item="item"
+            />
+          </div>
+        </section>
+
+        <!-- Sezione Recenti -->
+        <section class="catalogo-section">
+          <h3 class="section-title">
+            <span class="recent-icon">🆕</span>
+            Ultimi Arrivi
+          </h3>
+          <div class="catalogo-cards">
+            <ItemCard 
+              v-for="item in recentItems" 
+              :key="item.art_id" 
+              :item="item"
+            />
+          </div>
+        </section>
+
+        <!-- Catalogo per Gioco -->
         <section class="catalogo-section" v-for="(items, game) in itemsByGame" :key="game">
           <h3 class="section-title">{{ game }}</h3>
           <div class="catalogo-cards">
@@ -42,8 +73,46 @@ import axios from '@/config/axios'
 const route = useRoute()
 const router = useRouter()
 const itemsByGame = ref<Record<string, any[]>>({})
+const trendingItems = ref<any[]>([])
+const recentItems = ref<any[]>([])
 const loading = ref(true)
 const error = ref('')
+
+async function loadTrendingItems() {
+  try {
+    const response = await axios.post('/bitems/frontend/backend/getRecentAndTrending.php', 
+      'action=getTrendingItems&limit=4',
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    );
+    if (response.data.success) {
+      trendingItems.value = response.data.data;
+    }
+  } catch (err) {
+    console.error('Error loading trending items:', err)
+  }
+}
+
+async function loadRecentItems() {
+  try {
+    const response = await axios.post('/bitems/frontend/backend/getRecentAndTrending.php', 
+      'action=getRecentItems&limit=4',
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    );
+    if (response.data.success) {
+      recentItems.value = response.data.data;
+    }
+  } catch (err) {
+    console.error('Error loading recent items:', err)
+  }
+}
 
 async function loadCatalogo() {
   loading.value = true
@@ -70,11 +139,8 @@ async function loadCatalogo() {
         params: { action: 'getCatalogoDivisoInSezioni' }
       })
       
-      console.log('Catalogo response:', response.data) // Debug log
-      
       if (response.data.success) {
         itemsByGame.value = response.data.data
-        console.log('Items by game:', itemsByGame.value) // Debug log
       } else {
         throw new Error('Errore nel caricamento del catalogo')
       }
@@ -89,6 +155,8 @@ async function loadCatalogo() {
 
 function handleFiltersApplied(filteredData: any[]) {
   itemsByGame.value = { 'Risultati Filtro': filteredData }
+  trendingItems.value = []
+  recentItems.value = []
 }
 
 async function clearFilters() {
@@ -97,13 +165,27 @@ async function clearFilters() {
   
   // Reset catalogo data
   itemsByGame.value = {}
+  trendingItems.value = []
+  recentItems.value = []
   
-  // Reload catalog data
-  await loadCatalogo()
+  // Reload all data
+  await Promise.all([
+    loadCatalogo(),
+    loadTrendingItems(),
+    loadRecentItems()
+  ])
 }
 
-// Carica il catalogo al mount e quando cambia il parametro game
-onMounted(loadCatalogo)
+// Carica tutti i dati al mount
+onMounted(async () => {
+  await Promise.all([
+    loadCatalogo(),
+    loadTrendingItems(),
+    loadRecentItems()
+  ])
+})
+
+// Ricarica il catalogo quando cambia il parametro game
 watch(() => route.query.game, loadCatalogo)
 </script>
 
@@ -138,6 +220,10 @@ watch(() => route.query.game, loadCatalogo)
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.trending-icon, .recent-icon {
+  font-size: 1.4rem;
 }
 
 .catalogo-cards {

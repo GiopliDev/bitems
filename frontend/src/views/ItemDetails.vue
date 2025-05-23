@@ -1,39 +1,86 @@
-<div class="item-actions">
-  <div class="action-buttons">
-    <button 
-      class="action-button like" 
-      :class="{ active: userReaction === '1' }"
-      @click="handleReaction('1')"
-    >
-      <i class="fas fa-thumbs-up"></i>
-      <span>{{ item.likes }}</span>
-    </button>
-    <button 
-      class="action-button dislike" 
-      :class="{ active: userReaction === '0' }"
-      @click="handleReaction('0')"
-    >
-      <i class="fas fa-thumbs-down"></i>
-      <span>{{ item.dislikes }}</span>
-    </button>
+<template>
+  <div class="item-details" v-if="!loading">
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
+    <div v-else-if="item" class="item-content">
+      <div class="item-actions">
+        <div class="action-buttons">
+          <button 
+            class="action-button like" 
+            :class="{ active: userReaction === '1' }"
+            @click="handleReaction('1')"
+          >
+            <i class="fas fa-thumbs-up"></i>
+            <span>{{ item.likes }}</span>
+          </button>
+          <button 
+            class="action-button dislike" 
+            :class="{ active: userReaction === '0' }"
+            @click="handleReaction('0')"
+          >
+            <i class="fas fa-thumbs-down"></i>
+            <span>{{ item.dislikes }}</span>
+          </button>
+        </div>
+        <button 
+          v-if="!isOwner" 
+          class="buy-button" 
+          :disabled="item.art_qtaDisp <= 0"
+          @click="handleBuy"
+        >
+          {{ item.art_qtaDisp > 0 ? 'Acquista' : 'Esaurito' }}
+        </button>
+      </div>
+    </div>
   </div>
-  <button 
-    v-if="!isOwner" 
-    class="buy-button" 
-    :disabled="item.art_qtaDisp <= 0"
-    @click="handleBuy"
-  >
-    {{ item.art_qtaDisp > 0 ? 'Acquista' : 'Esaurito' }}
-  </button>
-</div>
+  <div v-else class="loading">
+    Caricamento dettagli articolo...
+  </div>
+</template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import axios from 'axios'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import axios from '@/config/axios'
 
+const route = useRoute()
+const router = useRouter()
 const item = ref<any>(null)
+const loading = ref(true)
+const error = ref('')
 const userReaction = ref<string | null>(null)
 const isOwner = ref(false)
+const isLoggedIn = ref(false)
+const showLoginPopup = ref(false)
+
+async function loadItemDetails() {
+  loading.value = true
+  error.value = ''
+  
+  try {
+    const response = await axios.get('/bitems/frontend/backend/getItem.php', {
+      params: { id: route.query.id }
+    })
+    
+    if (response.data.success) {
+      item.value = response.data.item
+      // Controlla se l'utente è il proprietario
+      const userResponse = await axios.get('/bitems/frontend/backend/checkSession.php')
+      if (userResponse.data.success) {
+        isLoggedIn.value = true
+        isOwner.value = userResponse.data.user.ute_id === item.value.art_ute_id
+      }
+    } else {
+      error.value = response.data.error || 'Impossibile caricare i dettagli dell\'articolo'
+    }
+  } catch (err) {
+    console.error('Error loading item details:', err)
+    error.value = 'Si è verificato un errore nel caricamento dei dettagli dell\'articolo'
+  } finally {
+    loading.value = false
+  }
+}
 
 async function handleReaction(voto: string) {
   if (!isLoggedIn.value) {
@@ -77,9 +124,59 @@ async function handleReaction(voto: string) {
     console.error('Error handling reaction:', error)
   }
 }
+
+async function handleBuy() {
+  if (!isLoggedIn.value) {
+    showLoginPopup.value = true
+    return
+  }
+
+  try {
+    const response = await axios.post('/bitems/frontend/backend/checkPurchase.php', {
+      art_id: item.value.art_id
+    })
+
+    if (response.data.success) {
+      // Aggiorna la quantità disponibile
+      item.value.art_qtaDisp--
+      // Mostra un messaggio di successo
+      alert('Acquisto effettuato con successo!')
+    } else {
+      alert(response.data.error || 'Errore durante l\'acquisto')
+    }
+  } catch (error) {
+    console.error('Error handling purchase:', error)
+    alert('Si è verificato un errore durante l\'acquisto')
+  }
+}
+
+onMounted(loadItemDetails)
 </script>
 
 <style scoped>
+.item-details {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--on-surface);
+  font-size: 1.2rem;
+}
+
+.error-message {
+  text-align: center;
+  padding: 2rem;
+  color: var(--error);
+  font-size: 1.2rem;
+  background: var(--error-container);
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
 .action-buttons {
   display: flex;
   gap: 1rem;

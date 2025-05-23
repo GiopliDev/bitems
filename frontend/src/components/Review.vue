@@ -5,11 +5,11 @@
         <span class="review-user">{{ review.ute_username }}</span>
         <span class="review-date">{{ formatDate(review.rec_timestamp) }}</span>
       </div>
-      <span class="review-rating" :class="{ positive: review.rec_voto, negative: !review.rec_voto }">
-        {{ review.rec_voto ? '👍 Positiva' : '👎 Negativa' }}
-      </span>
+      <div class="review-rating" :class="getRatingClass(review.rec_voto)">
+        {{ getRatingText(review.rec_voto) }}
+      </div>
     </div>
-    <div class="review-body">{{ review.rec_dex }}</div>
+    <p class="review-body">{{ review.rec_dex }}</p>
   </div>
 </template>
 
@@ -18,7 +18,7 @@ interface Review {
   rec_id: number
   rec_art_id: number
   rec_ute_id: number
-  rec_voto: number
+  rec_voto: string
   rec_dex: string
   ute_username: string
   rec_timestamp: string
@@ -37,6 +37,18 @@ function formatDate(timestamp: string) {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+function getRatingClass(voto: string): string {
+  if (voto === "1") return 'positive'
+  if (voto === "0") return 'negative'
+  return ''
+}
+
+function getRatingText(voto: string): string {
+  if (voto === "1") return '👍 Positiva'
+  if (voto === "0") return '👎 Negativa'
+  return 'Nessun voto'
 }
 </script>
 

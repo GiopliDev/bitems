@@ -1,6 +1,10 @@
 <?php
-require_once 'cors.php';
+
 include 'connection.php';
+header('Access-Control-Allow-Origin: http://localhost:5173');
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Methods: GET, POST, DELETE, PUT');
+header('Access-Control-Allow-Headers: Content-Type');
 
 if($_SERVER['REQUEST_METHOD'] == 'GET') {
     session_start();

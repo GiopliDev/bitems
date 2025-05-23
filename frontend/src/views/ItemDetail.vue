@@ -46,15 +46,15 @@
         <span class="dislike">
           👎 {{ item.dislikes || 0 }}
         </span>
-        <button 
+            <button 
           class="bookmark-btn" 
           :class="{ 'is-bookmarked': isBookmarked }"
           @click="addBookmark"
-        >
+            >
           <i class="fas" :class="isBookmarked ? 'fa-bookmark' : 'fa-bookmark-o'"></i>
           {{ isBookmarked ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti' }}
-        </button>
-      </div>
+            </button>
+          </div>
       <div class="item-reviews">
         <h3>Recensioni</h3>
         <AddReview 
@@ -166,7 +166,7 @@ interface Review {
   rec_id: number
   rec_art_id: number
   rec_ute_id: number
-  rec_voto: number
+  rec_voto: string
   rec_dex: string
   ute_username: string
   rec_timestamp: string
@@ -191,6 +191,14 @@ interface Item {
   isOwner: boolean
   likes?: number
   dislikes?: number
+  art_isPrivato?: boolean
+}
+
+// Gestione errori tipizzata
+interface ApiError {
+  response?: {
+    status?: number
+  }
 }
 
 const route = useRoute()
@@ -227,8 +235,8 @@ onMounted(async () => {
       
       // Calcola like e dislike dalle recensioni
       if (item.value?.recensioni) {
-        item.value.likes = item.value.recensioni.filter(review => review.rec_voto === '1').length
-        item.value.dislikes = item.value.recensioni.filter(review => review.rec_voto === '0').length
+        item.value.likes = item.value.recensioni.filter(review => review.rec_voto === "1").length
+        item.value.dislikes = item.value.recensioni.filter(review => review.rec_voto === "0").length
       }
       
       // Set current image if there are images
@@ -240,21 +248,40 @@ onMounted(async () => {
       }
 
       // Check if user can review
-      const reviewCheck = await axios.get(`/bitems/frontend/backend/checkCanReview.php?itemId=${route.query.id}`)
-      canReview.value = reviewCheck.data.canReview
+      try {
+        const reviewCheck = await axios.get(`/bitems/frontend/backend/checkCanReview.php?itemId=${route.query.id}`)
+        canReview.value = reviewCheck.data.canReview
+      } catch (reviewError) {
+        console.error('Errore nel controllo recensioni:', reviewError)
+        canReview.value = false
+      }
 
       // Check if item is bookmarked
       if (isLoggedIn.value) {
-        const bookmarkCheck = await axios.post('/bitems/frontend/backend/bookmarks.php', {
-          action: 'checkBookmark',
-          id_articolo: item.value?.art_id
-        })
-        isBookmarked.value = bookmarkCheck.data.isBookmarked
+        try {
+          const bookmarkCheck = await axios.post('/bitems/frontend/backend/bookmarks.php', {
+            action: 'checkBookmark',
+            id_articolo: item.value?.art_id
+          })
+          isBookmarked.value = bookmarkCheck.data.isBookmarked
+        } catch (bookmarkError) {
+          console.error('Errore nel controllo bookmark:', bookmarkError)
+          isBookmarked.value = false
+        }
       }
+    } else {
+      throw new Error('Dati articolo non validi')
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Errore nel recupero dei dati:', error)
-    showCustomAlert('Errore', 'Impossibile caricare i dettagli dell\'articolo')
+    const apiError = error as ApiError
+    if (apiError.response?.status === 404) {
+      showCustomAlert('Errore', 'Articolo non trovato')
+    } else if (apiError.response?.status === 401) {
+      showCustomAlert('Errore', 'Accesso non autorizzato')
+    } else {
+      showCustomAlert('Errore', 'Impossibile caricare i dettagli dell\'articolo')
+    }
   }
 })
 
@@ -351,10 +378,10 @@ function handleItemUpdate(updatedItem: Item) {
 }
 
 async function handleReviewSubmitted() {
-  // Reload item data to show new review
-  const itemResponse = await axios.get(`bitems/frontend/backend/getItem.php?id=${route.query.id}`)
-  item.value = itemResponse.data.item
-  canReview.value = false
+      // Reload item data to show new review
+      const itemResponse = await axios.get(`bitems/frontend/backend/getItem.php?id=${route.query.id}`)
+      item.value = itemResponse.data.item
+      canReview.value = false
 }
 
 function handlePaymentSuccess() {
@@ -371,8 +398,8 @@ async function loadItemData() {
       
       // Calcola like e dislike dalle recensioni
       if (item.value?.recensioni) {
-        item.value.likes = item.value.recensioni.filter(review => review.rec_voto === '1').length
-        item.value.dislikes = item.value.recensioni.filter(review => review.rec_voto === '0').length
+        item.value.likes = item.value.recensioni.filter(review => review.rec_voto === "1").length
+        item.value.dislikes = item.value.recensioni.filter(review => review.rec_voto === "0").length
       }
       
       // Set current image if there are images
