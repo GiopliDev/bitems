@@ -80,10 +80,9 @@ async function onSubmit() {
         
         if (userResponse.data.success) {
           const userData = {
-            ute_id: userResponse.data.profile.ute_id,
-            ute_username: userResponse.data.profile.ute_username,
-            ute_balance: userResponse.data.profile.ute_saldo,
-            ute_img_url: userResponse.data.profile.ute_img_url
+            id: userResponse.data.profile.ute_id,
+            username: userResponse.data.profile.ute_username,
+            balance: userResponse.data.profile.ute_saldo
           }
           localStorage.setItem('user', JSON.stringify(userData))
           emit('login-success', userData)

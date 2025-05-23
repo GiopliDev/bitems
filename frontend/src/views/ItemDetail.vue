@@ -46,7 +46,7 @@
         <span class="dislike">
           👎 {{ item.dislikes || 0 }}
         </span>
-        <button class="bookmark-btn" @click="addBookmark">
+        <button class="bookmark-btn">
           🔖 Bookmark
         </button>
       </div>
@@ -155,8 +155,6 @@ import Review from '../components/Review.vue'
 import AddReview from '../components/AddReview.vue'
 import ImagePopup from '../components/ImagePopup.vue'
 
-//interface per comodita e mantenere gli stessi dati tra php e vue
-
 interface Review {
   rec_id: number
   rec_art_id: number
@@ -231,12 +229,10 @@ onMounted(async () => {
   }
 })
 
-//funzione delle immagini interamente generata dall' AI
-//DA FARE: dotenv con i path delle immagini
 function prevImage() {
   if (!item.value?.images?.length) return
   imageIndex.value = (imageIndex.value - 1 + item.value.images.length) % item.value.images.length
-  currentImage.value = `/bitems/frontend/UploadedImages/${item.value.images[imageIndex.value]}` 
+  currentImage.value = `/bitems/frontend/UploadedImages/${item.value.images[imageIndex.value]}`
 }
 
 function nextImage() {
@@ -259,19 +255,6 @@ function showCustomAlert(title: string, subtitle: string) {
 
 function closeAlert() {
   showAlert.value = false
-}
-
-async function addBookmark() { //mandare le richieste non sottoforma di json ma con i dati in formato urlencoded
-  const response = await axios.post('http://localhost:5173/bitems/frontend/backend/bookmarks.php', {
-    id_utente: sessionStorage.getItem('user_id'),
-    id_articolo: item.value?.art_id, //definito in tutti i casi
-    action: 'addBookmark'
-  }, {
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    }
-  })
-  console.log(response.data) //debug
 }
 
 function showLoginAlert() {

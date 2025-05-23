@@ -11,7 +11,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once 'connection.php';
-require_once 'utils.php';
+
+function getImagesForArticle($conn, $articleId) {
+    $sql = "SELECT i.img_url 
+            FROM images i 
+            JOIN images_articoli ia ON i.img_id = ia.img_id 
+            WHERE ia.art_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param('i', $articleId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $images = [];
+    while($row = $result->fetch_assoc()) {
+        $images[] = $row['img_url'];
+    }
+    return $images;
+}
 
 if($_SERVER['REQUEST_METHOD'] == 'GET') {
     session_start();
@@ -60,9 +76,6 @@ if($_SERVER['REQUEST_METHOD'] == 'GET') {
             $status = 'pending_review';
         }
         
-        // Ottieni l'immagine dell'articolo usando la funzione getItemImage
-        $imageUrl = getItemImage($row['art_id']);
-        
         $history[] = [
             'id' => $row['cro_id'],
             'art_id' => $row['art_id'],
@@ -77,7 +90,7 @@ if($_SERVER['REQUEST_METHOD'] == 'GET') {
                 'rating' => $row['rec_voto'],
                 'description' => $row['rec_dex']
             ] : null,
-            'imageId' => $imageUrl // Usa l'URL dell'immagine direttamente
+            'images' => getImagesForArticle($conn, $row['art_id'])
         ];
     }
 
