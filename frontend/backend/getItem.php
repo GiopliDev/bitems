@@ -1,10 +1,8 @@
 <?php
 require_once 'cors.php';
-require_once 'connection.php';
+include 'connection.php';
 require_once 'utils.php';
 
-//deve ritornare sul json images:
-//["img_path1", "img_path2", "img_path3"]
 function getItemDetails($art_id) {
     $conn = connection();
     $sql = "SELECT a.*, 
@@ -17,52 +15,19 @@ function getItemDetails($art_id) {
             JOIN giochiaffiliati g ON a.art_gio_id = g.gio_id
             JOIN tipologie t ON a.art_tip_id = t.tip_id
             JOIN utenti u ON a.art_ute_id = u.ute_id
-            LEFT JOIN images_articoli ia ON a.art_id = ia.art_id
-            LEFT JOIN images i ON ia.img_id = i.img_id
             LEFT JOIN tags_articoli ta ON a.art_id = ta.art_id
             LEFT JOIN tags tg ON ta.tag_id = tg.tag_id
             WHERE a.art_id = ?
             GROUP BY a.art_id";
     
     $stmt = $conn->prepare($sql);
-    if ($stmt === false) {
-        die("Errore nella preparazione della query: " . $conn->error);
-    }
     $stmt->bind_param('i', $art_id);
     $stmt->execute();
     $result = $stmt->get_result();
     $item = $result->fetch_assoc();
     $stmt->close();
     
-    if ($item) {
-        $item = processItemData($item);
-        // Aggiungi il conteggio dei like/dislike
-        $counts = countLikeAndDislikes($art_id);
-        $item['likes'] = $counts['likes'];
-        $item['dislikes'] = $counts['dislikes'];
-    }
-    
-    return $item;
-}
-
-function countLikeAndDislikes($art_id) {
-    $conn = connection();
-    $sql = "SELECT 
-            SUM(CASE WHEN rec_voto = 1 THEN 1 ELSE 0 END) as likes,
-            SUM(CASE WHEN rec_voto = 0 THEN 1 ELSE 0 END) as dislikes
-            FROM recensioni 
-            WHERE rec_art_id = ?";
-    
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $art_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $counts = $result->fetch_assoc();
-    
-    return [
-        'likes' => (int)$counts['likes'] ?? 0,
-        'dislikes' => (int)$counts['dislikes'] ?? 0
-    ];
+    return $item ? processItemData($item) : null;
 }
 
 if($_SERVER['REQUEST_METHOD'] == 'GET') {
@@ -153,3 +118,4 @@ function getItemRecensioni($id){
 
     return json_encode($recensioni);
 }
+?>

@@ -2,16 +2,6 @@
   <aside class="filter-bar">
     <h3>Filtra oggetti</h3>
     <div class="filter-group">
-      <label for="title">Cerca per titolo:</label>
-      <input 
-        type="text" 
-        id="title" 
-        v-model="filters.title" 
-        placeholder="Inserisci il titolo..." 
-        class="text-input"
-      />
-    </div>
-    <div class="filter-group">
       <label for="game">Gioco:</label>
       <select id="game" v-model="filters.game">
         <option value="">Tutti</option>
@@ -31,13 +21,15 @@
     </div>
     <div class="filter-group">
       <label for="tags">Tag:</label>
+      <div v-if="createTagButton" class="create-tag-button">
+        <button @click="createTag">Crea Tag</button>
+      </div>
       <div class="tag-input-container">
         <input 
           type="text" 
           id="tags" 
           v-model="tagSearch" 
           placeholder="Inserisci tag (min 3 caratteri)" 
-          class="text-input"
         />
         <div v-if="showTagSuggestions" class="tag-suggestions">
           <div 
@@ -69,10 +61,8 @@
         <input type="number" min="0" max="2000" step="1" v-model.number="filters.maxPrice" placeholder="Max €" />
       </div>
     </div>
-    <div class="filter-actions">
-      <button class="main-btn" @click="apply">Applica e Cerca</button>
-      <a href="/catalogo" class="main-btn outline">Cancella filtri</a>
-    </div>
+    <button class="main-btn" @click="apply">Applica e Cerca</button>
+    <button class="main-btn outline" @click="reset">Cancella filtri</button>
   </aside>
 </template>
 
@@ -83,15 +73,12 @@
 <script setup lang="ts">
 import { reactive, ref, watch, onMounted } from 'vue'
 import axios from '@/config/axios'
-import { useRouter } from 'vue-router'
 
-const router = useRouter()
 const emit = defineEmits<{
   (e: 'filters-applied', data: any[]): void
 }>()
 
 const filters = reactive<{
-  title: string;
   game: string;
   category: string;
   minPrice: number;
@@ -99,7 +86,6 @@ const filters = reactive<{
   onlyAvailable: boolean;
   tags: string[];
 }>({
-  title: '',
   game: '',
   category: '',
   minPrice: 0,
@@ -113,7 +99,7 @@ const categories = ref<string[]>([])
 const tagSearch = ref('')
 const tagSuggestions = ref<string[]>([])
 const showTagSuggestions = ref(false)
-
+const createTagButton = ref(false)
 // Load games and categories on mount
 onMounted(async () => {
   try {
@@ -126,6 +112,7 @@ onMounted(async () => {
   }
 })
 
+// watch ha la stessa funzione di observable su angular 
 watch(tagSearch, async (newValue) => {
   if (newValue.length >= 3) {
     const response = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
@@ -136,14 +123,17 @@ watch(tagSearch, async (newValue) => {
     })
     
     if (response.data.code === 0) {
+      createTagButton.value = true
       showTagSuggestions.value = false
     } else {
       tagSuggestions.value = response.data
       showTagSuggestions.value = true
+      createTagButton.value = false
     }
   } else {
     showTagSuggestions.value = false
     tagSuggestions.value = []
+    createTagButton.value = false
   }
 })
  
@@ -155,16 +145,25 @@ function addTag(tag: string) {
   showTagSuggestions.value = false
 }
 
+async function createTag() {
+  const response = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
+    params: {
+      action: 'createTag',
+      tag: tagSearch.value
+    }
+  })
+}
 function removeTag(tag: string) {
   filters.tags = filters.tags.filter(t => t !== tag)
 }
 
+
+//NOTA BENE: se viene composto l url con i parametri e poi viene aggiornata la pagina non funziona,va fatta una richiesta con axios e poi popolare con le card
 async function apply() {
   try {
     const response = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
       params: {
         action: 'getCatalogoFiltrato',
-        title: filters.title,
         gameName: filters.game,
         category: filters.category,
         minPrice: filters.minPrice,
@@ -174,10 +173,22 @@ async function apply() {
       }
     })
     
+    // Emetti l'evento con i dati filtrati
     emit('filters-applied', response.data.data)
   } catch (error) {
     console.error('Error applying filters:', error)
   }
+}
+
+function reset() {
+  filters.game = ''
+  filters.category = ''
+  filters.minPrice = 0
+  filters.maxPrice = 2000
+  filters.onlyAvailable = false
+  filters.tags = []
+  tagSearch.value = ''
+  showTagSuggestions.value = false
 }
 </script>
 
@@ -196,78 +207,56 @@ async function apply() {
   box-shadow: 0 4px 32px #0003;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
   font-size: 1.1rem;
   border-left: 4px solid var(--primary-light);
   z-index: 10;
-  overflow-y: auto;
 }
-
 .filter-bar h3 {
   color: var(--primary-light);
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: 0.01em;
 }
-
 .filter-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.7rem;
 }
-
 label {
   color: var(--primary-light);
   font-size: 1rem;
   font-weight: 600;
+  margin-bottom: 0.2rem;
 }
-
-.text-input, select, input[type="number"] {
+select, input[type="number"] {
   background: var(--surface-light);
   border: 1.5px solid var(--primary-light);
   border-radius: 8px;
-  padding: 0.6rem 0.8rem;
+  padding: 0.5rem 0.8rem;
   color: var(--on-surface);
   font-size: 1rem;
+  margin-bottom: 0.2rem;
   outline: none;
-  transition: all 0.2s;
-  width: 100%;
+  transition: border-color 0.2s;
 }
-
-.text-input:focus, select:focus, input[type="number"]:focus {
+select:focus, input[type="number"]:focus {
   border-color: var(--secondary);
-  box-shadow: 0 0 0 2px rgba(var(--secondary-rgb), 0.2);
 }
-
-input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--primary-light);
-  cursor: pointer;
-}
-
 .price-inputs {
   display: flex;
   align-items: center;
   gap: 0.7rem;
 }
-
 .price-sep {
   color: var(--primary-light);
   font-weight: 700;
   font-size: 1.2rem;
 }
-
-.filter-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-  margin-top: 0.5rem;
-}
-
 .main-btn {
-  padding: 0.8rem 1.5rem;
+  margin-top: 0.7rem;
+  padding: 0.7rem 1.5rem;
   border: 2px solid var(--primary-light);
   background: var(--primary-light);
   color: var(--on-primary);
@@ -275,25 +264,19 @@ input[type="checkbox"] {
   border-radius: 8px;
   font-size: 1.1rem;
   cursor: pointer;
-  transition: all 0.2s;
-  text-align: center;
-  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
 }
-
 .main-btn:hover {
   background: var(--secondary);
   color: #18181c;
-  border-color: var(--secondary);
-  transform: translateY(-1px);
 }
-
 .main-btn.outline {
   background: transparent;
   color: var(--primary-light);
+  border: 2px solid var(--primary-light);
 }
-
 .main-btn.outline:hover {
-  background: var(--surface-light);
+  background: #222;
   color: var(--secondary);
 }
 
@@ -312,19 +295,16 @@ input[type="checkbox"] {
   max-height: 200px;
   overflow-y: auto;
   z-index: 100;
-  margin-top: 0.3rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .tag-suggestion {
-  padding: 0.6rem 1rem;
+  padding: 0.5rem 1rem;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
 .tag-suggestion:hover {
   background: var(--surface-light);
-  color: var(--secondary);
 }
 
 .selected-tags {
@@ -342,7 +322,6 @@ input[type="checkbox"] {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.9rem;
 }
 
 .remove-tag {
@@ -353,12 +332,9 @@ input[type="checkbox"] {
   padding: 0;
   font-size: 1.2rem;
   line-height: 1;
-  opacity: 0.8;
-  transition: opacity 0.2s;
 }
 
 .remove-tag:hover {
-  opacity: 1;
   color: var(--secondary);
 }
 </style> 

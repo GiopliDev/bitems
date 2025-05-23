@@ -9,7 +9,6 @@ require_once 'cors.php';
 
 //get di tutti gli oggetti applicando una query sull url
 include 'connection.php';
-require_once 'utils.php';
 
 if($_SERVER['REQUEST_METHOD'] == 'GET'){
     //se è solo get è nell url non c'è una query mostro tutte le sezioni
@@ -36,10 +35,6 @@ if($_SERVER['REQUEST_METHOD'] == 'GET'){
         }else if($_GET['action'] == 'createTag'){
             $tag = isset($_GET['tag']) ? $_GET['tag'] : '';
             createTag($tag);
-        }else if($_GET['action'] == 'getTrendingItems'){
-            echo getTrendingItems();
-        }else if($_GET['action'] == 'getRecentItems'){
-            echo getRecentItems();
         }
     }
 }
@@ -105,11 +100,49 @@ function getCatalogoDivisoInSezioni(){
     
     // Per ogni gioco, prendiamo i primi 4 articoli
     while($game = $result->fetch_assoc()) {
-        $whereClause = "articoli.art_gio_id = ? AND articoli.art_isPrivato = 0";
-        $items = getItemCardData($whereClause, [$game['gio_id']], 'i', 4);
+        $sql = "SELECT 
+                articoli.art_id,
+                articoli.art_titolo,
+                articoli.art_prezzoUnitario,
+                articoli.art_qtaDisp,
+                articoli.art_descrizione,
+                articoli.art_timestamp,
+                articoli.art_isPrivato,
+                giochiaffiliati.gio_nome as game_name,
+                tipologie.tip_nome as category_name,
+                utenti.ute_username as seller_name,
+                utenti.ute_rep as seller_rep,
+                GROUP_CONCAT(DISTINCT tg.tag_nome) as tags,
+                (SELECT img.img_url 
+                 FROM images_articoli ia 
+                 JOIN images img ON ia.img_id = img.img_id 
+                 WHERE ia.art_id = articoli.art_id 
+                 ORDER BY RAND() 
+                 LIMIT 1) as image
+                FROM articoli 
+                INNER JOIN giochiaffiliati ON articoli.art_gio_id = giochiaffiliati.gio_id
+                INNER JOIN tipologie ON articoli.art_tip_id = tipologie.tip_id
+                INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id
+                LEFT JOIN tags_articoli ta ON articoli.art_id = ta.art_id
+                LEFT JOIN tags tg ON ta.tag_id = tg.tag_id
+                WHERE articoli.art_gio_id = ? AND articoli.art_isPrivato = 0
+                GROUP BY articoli.art_id
+                ORDER BY articoli.art_timestamp DESC
+                LIMIT 4";
         
-        if (!isset($items['error']) && !empty($items)) {
-            $catalogo[$game['gio_nome']] = array_slice($items, 0, 4);
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('i', $game['gio_id']);
+        $stmt->execute();
+        $items = $stmt->get_result();
+        
+        $gameItems = [];
+        while($item = $items->fetch_assoc()) {
+            $item['tags'] = $item['tags'] ? explode(',', $item['tags']) : [];
+            $gameItems[] = $item;
+        }
+        
+        if (!empty($gameItems)) {
+            $catalogo[$game['gio_nome']] = $gameItems;
         }
     }
     
@@ -117,60 +150,99 @@ function getCatalogoDivisoInSezioni(){
 }
 
 function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAvailable, $tags){
-    $whereClause = [];
-    $params = [];
-    $types = '';
+    $conn = connection();
     
-    // Title filter
-    if (!empty($_GET['title'])) {
-        $whereClause[] = "articoli.art_titolo LIKE ?";
-        $params[] = "%" . $_GET['title'] . "%";
-        $types .= "s";
-    }
+    // Base query
+    $sql = "SELECT 
+            articoli.art_id,
+            articoli.art_titolo,
+            articoli.art_prezzoUnitario,
+            articoli.art_qtaDisp,
+            articoli.art_descrizione,
+            articoli.art_timestamp,
+            articoli.art_isPrivato,
+            giochiaffiliati.gio_nome as game_name,
+            tipologie.tip_nome as category_name,
+            utenti.ute_username as seller_name,
+            utenti.ute_rep as seller_rep,
+            GROUP_CONCAT(DISTINCT tg.tag_nome) as tags,
+            (SELECT img.img_url 
+             FROM images_articoli ia 
+             JOIN images img ON ia.img_id = img.img_id 
+             WHERE ia.art_id = articoli.art_id 
+             ORDER BY RAND() 
+             LIMIT 1) as image
+            FROM articoli 
+            INNER JOIN giochiaffiliati ON articoli.art_gio_id = giochiaffiliati.gio_id
+            INNER JOIN tipologie ON articoli.art_tip_id = tipologie.tip_id
+            INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id
+            LEFT JOIN tags_articoli ta ON articoli.art_id = ta.art_id
+            LEFT JOIN tags tg ON ta.tag_id = tg.tag_id
+            WHERE articoli.art_isPrivato = 0";
+    
+    $types = "";
+    $values = [];
     
     // Game filter
     if (!empty($gameName)) {
-        $whereClause[] = "giochiaffiliati.gio_nome = ?";
-        $params[] = $gameName;
+        $sql .= " AND giochiaffiliati.gio_nome = ?";
         $types .= "s";
+        $values[] = $gameName;
     }
     
     // Category filter
     if (!empty($category)) {
-        $whereClause[] = "tipologie.tip_nome = ?";
-        $params[] = $category;
+        $sql .= " AND tipologie.tip_nome = ?";
         $types .= "s";
+        $values[] = $category;
     }
     
     // Price range filter
-    $whereClause[] = "articoli.art_prezzoUnitario BETWEEN ? AND ?";
-    $params[] = $minPrice;
-    $params[] = $maxPrice;
-    $types .= "dd";
+    if ($minPrice > 0) {
+        $sql .= " AND articoli.art_prezzoUnitario >= ?";
+        $types .= "d";
+        $values[] = $minPrice;
+    }
+    
+    if ($maxPrice < 20000) {
+        $sql .= " AND articoli.art_prezzoUnitario <= ?";
+        $types .= "d";
+        $values[] = $maxPrice;
+    }
     
     // Availability filter
     if ($onlyAvailable) {
-        $whereClause[] = "articoli.art_qtaDisp > 0";
+        $sql .= " AND articoli.art_qtaDisp > 0";
     }
     
     // Tags filter
     if (!empty($tags)) {
-        $placeholders = str_repeat('?,', count($tags) - 1) . '?';
-        $whereClause[] = "EXISTS (
-            SELECT 1 FROM tags_articoli ta2 
-            JOIN tags tg2 ON ta2.tag_id = tg2.tag_id 
-            WHERE ta2.art_id = articoli.art_id 
-            AND tg2.tag_nome IN ($placeholders)
-        )";
-        $params = array_merge($params, $tags);
-        $types .= str_repeat('s', count($tags));
+        $tagArray = explode(',', $tags);
+        foreach ($tagArray as $tag) {
+            $sql .= " AND EXISTS (
+                SELECT 1 FROM tags_articoli ta 
+                INNER JOIN tags t ON ta.tag_id = t.tag_id 
+                WHERE ta.art_id = articoli.art_id 
+                AND t.tag_nome = ?
+            )";
+            $types .= "s";
+            $values[] = $tag;
+        }
     }
     
-    $whereClauseStr = implode(' AND ', $whereClause);
-    $items = getItemCardData($whereClauseStr, $params, $types);
+    $sql .= " GROUP BY articoli.art_id ORDER BY articoli.art_timestamp DESC";
     
-    if (isset($items['error'])) {
-        return json_encode(['error' => $items['error']]);
+    $stmt = $conn->prepare($sql);
+    if (!empty($values)) {
+        $stmt->bind_param($types, ...$values);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $items = [];
+    while($row = $result->fetch_assoc()) {
+        $row['tags'] = $row['tags'] ? explode(',', $row['tags']) : [];
+        $items[] = $row;
     }
     
     return json_encode(['data' => $items]);
@@ -178,94 +250,22 @@ function getCatalogoFiltrato($gameName, $category, $minPrice, $maxPrice, $onlyAv
 
 function getCatalogoRecenti(){
     $conn = connection();
-    
-    // Query per ottenere i 4 articoli più recenti
-    $whereClause = "articoli.art_isPrivato = 0";
-    $items = getItemCardData($whereClause, [], '', 4);
-    
-    if (isset($items['error'])) {
-        return json_encode(['error' => $items['error']]);
-    }
-    
-    // Assicuriamoci che il prezzo sia un numero
-    foreach ($items as &$item) {
-        $item['art_prezzoUnitario'] = floatval($item['art_prezzoUnitario']);
-    }
-    
-    return json_encode($items);
+
+    $sql = "SELECT * FROM articoli ORDER BY art_timestamp DESC";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return json_encode($result);
 }
 
-function getCatalogoTrending(){
+function getCatalogoTrending(){ //calcolo in base al numero di acquisti al giorno controllati su cronologiaacquisti
     $conn = connection();
-    
-    // Query per ottenere gli articoli più recensiti positivamente
-    $whereClause = "articoli.art_isPrivato = 0 AND articoli.art_id IN (
-        SELECT rec_art_id 
-        FROM recensioni 
-        WHERE rec_voto = '1'
-        GROUP BY rec_art_id
-        ORDER BY COUNT(*) DESC
-        LIMIT 4
-    )";
-    
-    $items = getItemCardData($whereClause, [], '', 4);
-    
-    if (isset($items['error'])) {
-        return json_encode(['error' => $items['error']]);
-    }
-    
-    // Assicuriamoci che il prezzo sia un numero
-    foreach ($items as &$item) {
-        $item['art_prezzoUnitario'] = floatval($item['art_prezzoUnitario']);
-    }
-    
-    return json_encode($items);
-}
 
-function getTrendingItems() {
-    $conn = connection();
-    
-    // Query per ottenere gli articoli con più ordini nell'ultima settimana
-    $whereClause = "articoli.art_isPrivato = 0 AND articoli.art_id IN (
-        SELECT cro_art_id 
-        FROM cronologiaacquisti 
-        WHERE cro_timestamp >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        GROUP BY cro_art_id
-        ORDER BY COUNT(*) DESC
-        LIMIT 4
-    )";
-    
-    $items = getItemCardData($whereClause, [], '', 4);
-    
-    if (isset($items['error'])) {
-        return json_encode(['error' => $items['error']]);
-    }
-    
-    // Assicuriamoci che il prezzo sia un numero
-    foreach ($items as &$item) {
-        $item['art_prezzoUnitario'] = floatval($item['art_prezzoUnitario']);
-    }
-    
-    return json_encode(['success' => true, 'items' => $items]);
-}
-
-function getRecentItems() {
-    $conn = connection();
-    
-    // Query per ottenere i 4 articoli più recenti
-    $whereClause = "articoli.art_isPrivato = 0";
-    $items = getItemCardData($whereClause, [], '', 4);
-    
-    if (isset($items['error'])) {
-        return json_encode(['error' => $items['error']]);
-    }
-    
-    // Assicuriamoci che il prezzo sia un numero
-    foreach ($items as &$item) {
-        $item['art_prezzoUnitario'] = floatval($item['art_prezzoUnitario']);
-    }
-    
-    return json_encode(['success' => true, 'items' => $items]);
+    $sql = "SELECT * FROM articoli ORDER BY art_valutazione DESC";  
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return json_encode($result);
 }
 
 ?>

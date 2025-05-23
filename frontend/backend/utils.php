@@ -23,30 +23,13 @@ function getItemImage($art_id) {
 
 //gestishe i tag che sono concatenati su tutte le query
 function processItemData($item) {
-    if (!$item) return null;
-    
     // Convert comma-separated strings to arrays
     $item['tags'] = $item['tags'] ? explode(',', $item['tags']) : [];
     
-    // Get all images for this item
-    $conn = connection();
-    $sql = "SELECT i.img_url 
-            FROM images_articoli ia 
-            JOIN images i ON ia.img_id = i.img_id 
-            WHERE ia.art_id = ?";
-    $stmt = $conn->prepare($sql);
-    if ($stmt === false) {
-        die("Errore nella preparazione della query: " . $conn->error);
+    // Get a random image for the item
+    if (!isset($item['image'])) {
+        $item['image'] = getItemImage($item['art_id']);
     }
-    $stmt->bind_param('i', $item['art_id']);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $images = [];
-    while ($row = $result->fetch_assoc()) {
-        $images[] = $row['img_url'];
-    }
-    $item['images'] = $images;
     
     return $item;
 }
@@ -117,66 +100,5 @@ function linkImageToItem($itemId, $imageId, $conn) {
     $stmt = $conn->prepare($sql);
     $stmt->bind_param('ii', $itemId, $imageId);
     return $stmt->execute();
-}
-
-function getItemCardData($whereClause = '', $params = [], $types = '', $limit = null) {
-    $conn = connection();
-    
-    $sql = "SELECT 
-            articoli.art_id,
-            articoli.art_titolo,
-            articoli.art_prezzoUnitario,
-            articoli.art_qtaDisp,
-            articoli.art_descrizione,
-            articoli.art_timestamp,
-            articoli.art_isPrivato,
-            giochiaffiliati.gio_nome as game_name,
-            tipologie.tip_nome as category_name,
-            utenti.ute_username as seller_name,
-            utenti.ute_rep as seller_rep,
-            GROUP_CONCAT(DISTINCT tg.tag_nome) as tags,
-            (SELECT img.img_url 
-             FROM images_articoli ia 
-             JOIN images img ON ia.img_id = img.img_id 
-             WHERE ia.art_id = articoli.art_id 
-             ORDER BY RAND() 
-             LIMIT 1) as image
-            FROM articoli 
-            INNER JOIN giochiaffiliati ON articoli.art_gio_id = giochiaffiliati.gio_id
-            INNER JOIN tipologie ON articoli.art_tip_id = tipologie.tip_id
-            INNER JOIN utenti ON articoli.art_ute_id = utenti.ute_id
-            LEFT JOIN tags_articoli ta ON articoli.art_id = ta.art_id
-            LEFT JOIN tags tg ON ta.tag_id = tg.tag_id";
-    
-    if (!empty($whereClause)) {
-        $sql .= " WHERE " . $whereClause;
-    }
-    
-    $sql .= " GROUP BY articoli.art_id ORDER BY articoli.art_timestamp DESC";
-    
-    if ($limit !== null) {
-        $sql .= " LIMIT " . intval($limit);
-    }
-    
-    $stmt = $conn->prepare($sql);
-    if ($stmt === false) {
-        return ['error' => 'Failed to prepare statement: ' . $conn->error];
-    }
-    
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
-    }
-    
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $items = [];
-    while ($row = $result->fetch_assoc()) {
-        $row['tags'] = $row['tags'] ? explode(',', $row['tags']) : [];
-        $items[] = $row;
-    }
-    
-    $stmt->close();
-    return $items;
 }
 ?> 

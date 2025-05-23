@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.1.1
+-- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Creato il: Mag 23, 2025 alle 13:20
--- Versione del server: 10.4.21-MariaDB
--- Versione PHP: 7.3.31
+-- Creato il: Mag 21, 2025 alle 20:03
+-- Versione del server: 10.4.32-MariaDB
+-- Versione PHP: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -38,7 +38,7 @@ CREATE TABLE `articoli` (
   `art_tip_id` int(11) NOT NULL,
   `art_ute_id` int(11) NOT NULL,
   `art_gio_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dump dei dati per la tabella `articoli`
@@ -47,12 +47,16 @@ CREATE TABLE `articoli` (
 INSERT INTO `articoli` (`art_id`, `art_titolo`, `art_qtaDisp`, `art_prezzoUnitario`, `art_descrizione`, `art_timestamp`, `art_isPrivato`, `art_tip_id`, `art_ute_id`, `art_gio_id`) VALUES
 (1, 'Easter Egg Launcher LVL 144', 10, 0.5, 'The special weapon added in the latest STW update.', '2025-05-16 09:46:30', 0, 1, 1, 1),
 (2, 'Scavafosse 144 Glitched', 34, 12, 'Scavafosse con 2 attributi uguali a livello massimo e durabilità full.', '2025-05-19 18:17:58', 0, 1, 2, 1),
-(10, '10px Danger Zone Cases W/O Keys', 91, 5.45, '10 cases without keys', '2025-05-21 17:00:32', 0, 6, 1, 3),
+(3, 'asdasd', 1, 0.01, 'asdasd', '2025-05-21 16:51:45', 0, 5, 1, 3),
+(4, 'asdasd', 1, 0.01, 'asdasd', '2025-05-21 16:51:57', 0, 5, 1, 3),
+(5, 'asdasd', 13, 0.01, 'asdasd', '2025-05-21 16:53:13', 0, 5, 1, 3),
+(6, 'asdasd', 1, 0.01, 'asdasd', '2025-05-21 16:56:01', 0, 5, 1, 3),
+(7, 'asdasd', 1, 0.01, 'asdasd', '2025-05-21 16:56:52', 0, 6, 1, 3),
+(8, 'asdasd', 1, 0.01, 'asdasd', '2025-05-21 16:57:23', 0, 6, 1, 3),
+(9, 'Test', 112, 0.42, 'dexscrizione csgo', '2025-05-21 16:59:27', 0, 5, 1, 3),
+(10, '10px Danger Zone Cases W/O Keys', 99, 5.45, '10 cases without keys', '2025-05-21 17:00:32', 0, 6, 1, 3),
 (11, 'vsdvsdv', 0, 0.2, 'sdvsdvsdv', '2025-05-21 17:01:10', 0, 5, 1, 3),
-(12, '50x Exalted Orbs', 0, 0.34, 'instant delivery', '2025-05-21 17:47:32', 0, 1, 1, 4),
-(13, 'Mythic Ender Dragon Pet LVL 100 - Hypixel Skyblock', 0, 20, 'All candies have been used.', '2025-05-23 08:37:32', 0, 1, 3, 2),
-(15, 'Account raro del tribu raro con renegade raider', 3, 170, 'Account raro del tribu con renegade raider e tanto altro ancora!!!!!\n10000 vbucks del tribu.\n\nDopo aver comprato l item contattatemi su telegram: @tribu', '2025-05-23 10:52:41', 0, 5, 4, 1),
-(16, 'tribu', 1, 100000, 'tribu', '2025-05-23 10:53:29', 0, 1, 4, 0);
+(12, '50x Exalted Orbs', 10, 0.34, 'instant delivery', '2025-05-21 17:47:32', 0, 1, 1, 4);
 
 -- --------------------------------------------------------
 
@@ -65,7 +69,7 @@ CREATE TABLE `chats` (
   `cht_creationDate` timestamp NOT NULL DEFAULT current_timestamp(),
   `cht_ute_id1` int(11) NOT NULL,
   `cht_ute_id2` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 -- --------------------------------------------------------
 
@@ -81,7 +85,7 @@ CREATE TABLE `cronologiaacquisti` (
   `cro_prezzoFinale` float NOT NULL,
   `cro_timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
   `cro_rec_id` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dump dei dati per la tabella `cronologiaacquisti`
@@ -90,17 +94,7 @@ CREATE TABLE `cronologiaacquisti` (
 INSERT INTO `cronologiaacquisti` (`cro_id`, `cro_art_id`, `cro_ute_id`, `cro_qta`, `cro_prezzoFinale`, `cro_timestamp`, `cro_rec_id`) VALUES
 (1, 2, 1, 1, 12, '2025-05-21 17:34:14', 2),
 (2, 10, 1, 1, 5.45, '2025-05-21 17:43:03', 3),
-(3, 11, 1, 1, 0.2, '2025-05-21 17:50:17', 4),
-(4, 10, 3, 6, 32.7, '2025-05-23 08:40:41', 5),
-(5, 13, 3, 1, 20, '2025-05-23 09:51:40', 6),
-(6, 13, 1, 1, 20, '2025-05-23 09:57:11', 7),
-(7, 12, 2, 6, 2.04, '2025-05-23 10:45:53', 8),
-(8, 15, 4, 1, 370, '2025-05-23 10:54:12', 10),
-(9, 15, 4, 1, 370, '2025-05-23 10:54:26', 10),
-(10, 13, 4, 1, 20, '2025-05-23 10:54:33', 9),
-(11, 12, 4, 4, 1.36, '2025-05-23 10:54:38', 11),
-(12, 10, 4, 1, 5.45, '2025-05-23 11:06:38', 12),
-(13, 10, 4, 1, 5.45, '2025-05-23 11:13:23', NULL);
+(3, 11, 1, 1, 0.2, '2025-05-21 17:50:17', 4);
 
 -- --------------------------------------------------------
 
@@ -111,18 +105,18 @@ INSERT INTO `cronologiaacquisti` (`cro_id`, `cro_art_id`, `cro_ute_id`, `cro_qta
 CREATE TABLE `giochiaffiliati` (
   `gio_id` int(11) NOT NULL,
   `gio_nome` varchar(25) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dump dei dati per la tabella `giochiaffiliati`
 --
 
 INSERT INTO `giochiaffiliati` (`gio_id`, `gio_nome`) VALUES
-(0, 'Other'),
 (1, 'Fortnite'),
 (2, 'Minecraft'),
 (3, 'CS:GO'),
-(4, 'Path Of Exile 2');
+(4, 'Path Of Exile 2'),
+(5, 'Other');
 
 -- --------------------------------------------------------
 
@@ -133,7 +127,7 @@ INSERT INTO `giochiaffiliati` (`gio_id`, `gio_nome`) VALUES
 CREATE TABLE `images` (
   `img_id` int(11) NOT NULL,
   `img_url` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dump dei dati per la tabella `images`
@@ -163,18 +157,7 @@ INSERT INTO `images` (`img_id`, `img_url`) VALUES
 (21, 'img_682e06d6b53df.jpg'),
 (22, 'img_682e06d6b53df.jpg'),
 (23, 'img_682e11b4c6dec.png'),
-(24, 'img_682e11b4c6dec.png'),
-(25, 'img_683033cc5992d.png'),
-(26, 'img_683033cc5de1f.png'),
-(27, 'img_683033cc5992d.png'),
-(28, 'img_683033cc5de1f.png'),
-(29, 'img_6830527be3e2a.png'),
-(30, 'img_683053796796a.jpg'),
-(31, 'img_683053796bbf1.png'),
-(32, 'img_683053796796a.jpg'),
-(33, 'img_683053796bbf1.png'),
-(34, 'img_683053a972231.png'),
-(35, 'img_683053a972231.png');
+(24, 'img_682e11b4c6dec.png');
 
 -- --------------------------------------------------------
 
@@ -186,7 +169,7 @@ CREATE TABLE `images_articoli` (
   `img_art_id` int(11) NOT NULL,
   `img_id` int(11) NOT NULL,
   `art_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dump dei dati per la tabella `images_articoli`
@@ -196,12 +179,7 @@ INSERT INTO `images_articoli` (`img_art_id`, `img_id`, `art_id`) VALUES
 (1, 18, 9),
 (2, 20, 10),
 (3, 22, 11),
-(4, 24, 12),
-(5, 27, 13),
-(6, 28, 13),
-(7, 32, 15),
-(8, 33, 15),
-(9, 35, 16);
+(4, 24, 12);
 
 -- --------------------------------------------------------
 
@@ -215,7 +193,7 @@ CREATE TABLE `messaggi` (
   `mes_timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
   `mes_ute_id` int(11) NOT NULL,
   `mes_chat_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 -- --------------------------------------------------------
 
@@ -229,26 +207,18 @@ CREATE TABLE `recensioni` (
   `rec_ute_id` int(11) NOT NULL,
   `rec_voto` enum('0','1') NOT NULL,
   `rec_dex` varchar(255) NOT NULL,
-  `rec_timestamp` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `rec_timestamp` int(11) NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dump dei dati per la tabella `recensioni`
 --
 
 INSERT INTO `recensioni` (`rec_id`, `rec_art_id`, `rec_ute_id`, `rec_voto`, `rec_dex`, `rec_timestamp`) VALUES
-(1, 1, 1, '1', 'Velocissimo!', '0000-00-00 00:00:00'),
-(2, 2, 1, '0', 'mi ha scammato', '0000-00-00 00:00:00'),
-(3, 10, 1, '0', 'ho ordinato 10 casse e me ne sono arrivate 8', '0000-00-00 00:00:00'),
-(4, 11, 1, '0', 'c\'era tutto,addirittura una spada 2YA', '0000-00-00 00:00:00'),
-(5, 10, 3, '0', 'ottimo', '0000-00-00 00:00:00'),
-(6, 13, 3, '', 'no', '2025-05-23 09:51:48'),
-(7, 13, 1, '0', 'Veloce e a basso prezzo', '2025-05-23 09:58:40'),
-(8, 12, 2, '0', 'Tutto ottimo,ne ho ricevute anche 10 in piu', '2025-05-23 10:46:13'),
-(9, 13, 4, '', 'male', '2025-05-23 10:54:52'),
-(10, 15, 4, '', 'non fidatevi del venditore', '2025-05-23 10:55:06'),
-(11, 12, 4, '', 'male', '2025-05-23 10:55:51'),
-(12, 10, 4, '0', 'A', '2025-05-23 11:13:17');
+(1, 1, 1, '1', 'Velocissimo!', 2147483647),
+(2, 2, 1, '0', 'mi ha scammato', 2147483647),
+(3, 10, 1, '0', 'ho ordinato 10 casse e me ne sono arrivate 8', 2147483647),
+(4, 11, 1, '0', 'c\'era tutto,addirittura una spada 2YA', 2147483647);
 
 -- --------------------------------------------------------
 
@@ -260,14 +230,7 @@ CREATE TABLE `segnalibri` (
   `seg_id` int(11) NOT NULL,
   `seg_ute_id` int(11) NOT NULL,
   `seg_art_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
---
--- Dump dei dati per la tabella `segnalibri`
---
-
-INSERT INTO `segnalibri` (`seg_id`, `seg_ute_id`, `seg_art_id`) VALUES
-(3, 4, 15);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -278,7 +241,7 @@ INSERT INTO `segnalibri` (`seg_id`, `seg_ute_id`, `seg_art_id`) VALUES
 CREATE TABLE `tags` (
   `tag_id` int(11) NOT NULL,
   `tag_nome` varchar(20) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dump dei dati per la tabella `tags`
@@ -298,12 +261,7 @@ INSERT INTO `tags` (`tag_id`, `tag_nome`) VALUES
 (11, 'case'),
 (12, 'test'),
 (13, 'currency'),
-(14, 'path of exile 2'),
-(15, 'pet'),
-(16, 'hypixel'),
-(17, 'skyblock'),
-(18, 'fortnite'),
-(19, 'tribu');
+(14, 'path of exile 2');
 
 -- --------------------------------------------------------
 
@@ -314,7 +272,7 @@ INSERT INTO `tags` (`tag_id`, `tag_nome`) VALUES
 CREATE TABLE `tags_articoli` (
   `art_id` int(11) NOT NULL,
   `tag_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dump dei dati per la tabella `tags_articoli`
@@ -336,13 +294,7 @@ INSERT INTO `tags_articoli` (`art_id`, `tag_id`) VALUES
 (10, 4),
 (11, 12),
 (12, 13),
-(12, 4),
-(13, 15),
-(13, 16),
-(13, 17),
-(13, 4),
-(15, 19),
-(16, 19);
+(12, 4);
 
 -- --------------------------------------------------------
 
@@ -353,7 +305,7 @@ INSERT INTO `tags_articoli` (`art_id`, `tag_id`) VALUES
 CREATE TABLE `tipologie` (
   `tip_id` int(11) NOT NULL,
   `tip_nome` varchar(25) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dump dei dati per la tabella `tipologie`
@@ -383,17 +335,15 @@ CREATE TABLE `utenti` (
   `ute_img_id` int(11) NOT NULL DEFAULT 1,
   `ute_rep` int(11) NOT NULL DEFAULT 0,
   `ute_saldo` float NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dump dei dati per la tabella `utenti`
 --
 
 INSERT INTO `utenti` (`ute_id`, `ute_nome`, `ute_cognome`, `ute_username`, `ute_email`, `ute_password`, `ute_dex`, `ute_img_id`, `ute_rep`, `ute_saldo`) VALUES
-(1, 'Gabriele', 'Bondoni', 'Giopli', '', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'heyaaaaa!', 5, 80, 11.25),
-(2, 'Tommaso', 'Colonni', 'Araton38', 'gabriele.bondoni@gmail.com', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'Questa è la descrizione standard!', 1, -1, 37.96),
-(3, 'Francesco', 'Aloigi', 'Falo', 'falo@gmail.com', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'Venditore affidabile,prevalentemente gioco ad Elden Ring.\nNumero di telefono: 333 333 3333', 1, -1, 14.3),
-(4, 'Giacomo', 'Maffucci', 'tribu', 'tribu@gmail.com', 'd13412ca0c103463da7808a9519b5dd8ab6f44abc6e84515334527b805887874', 'tribu \n', 29, -1, 227.74);
+(1, 'Gabriele', 'Bondoni', 'Giopli', '', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'heyaaaaa!', 5, 78, 22.35),
+(2, 'Tommaso', 'Colonni', 'Araton38', 'gabriele.bondoni@gmail.com', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'Questa è la descrizione standard!', 1, -1, 40);
 
 --
 -- Indici per le tabelle scaricate
@@ -492,8 +442,7 @@ ALTER TABLE `tipologie`
 -- Indici per le tabelle `utenti`
 --
 ALTER TABLE `utenti`
-  ADD PRIMARY KEY (`ute_id`),
-  ADD KEY `ute_img_id` (`ute_img_id`);
+  ADD PRIMARY KEY (`ute_id`);
 
 --
 -- AUTO_INCREMENT per le tabelle scaricate
@@ -503,7 +452,7 @@ ALTER TABLE `utenti`
 -- AUTO_INCREMENT per la tabella `articoli`
 --
 ALTER TABLE `articoli`
-  MODIFY `art_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `art_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT per la tabella `chats`
@@ -515,7 +464,7 @@ ALTER TABLE `chats`
 -- AUTO_INCREMENT per la tabella `cronologiaacquisti`
 --
 ALTER TABLE `cronologiaacquisti`
-  MODIFY `cro_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `cro_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT per la tabella `giochiaffiliati`
@@ -527,13 +476,13 @@ ALTER TABLE `giochiaffiliati`
 -- AUTO_INCREMENT per la tabella `images`
 --
 ALTER TABLE `images`
-  MODIFY `img_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `img_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT per la tabella `images_articoli`
 --
 ALTER TABLE `images_articoli`
-  MODIFY `img_art_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `img_art_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT per la tabella `messaggi`
@@ -545,19 +494,19 @@ ALTER TABLE `messaggi`
 -- AUTO_INCREMENT per la tabella `recensioni`
 --
 ALTER TABLE `recensioni`
-  MODIFY `rec_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `rec_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT per la tabella `segnalibri`
 --
 ALTER TABLE `segnalibri`
-  MODIFY `seg_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `seg_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT per la tabella `tags`
 --
 ALTER TABLE `tags`
-  MODIFY `tag_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `tag_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT per la tabella `tipologie`
@@ -569,7 +518,7 @@ ALTER TABLE `tipologie`
 -- AUTO_INCREMENT per la tabella `utenti`
 --
 ALTER TABLE `utenti`
-  MODIFY `ute_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `ute_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- Limiti per le tabelle scaricate
@@ -625,12 +574,6 @@ ALTER TABLE `segnalibri`
 ALTER TABLE `tags_articoli`
   ADD CONSTRAINT `tagarticoli_art_id` FOREIGN KEY (`art_id`) REFERENCES `articoli` (`art_id`),
   ADD CONSTRAINT `tagarticoli_tag_id` FOREIGN KEY (`tag_id`) REFERENCES `tags` (`tag_id`);
-
---
--- Limiti per la tabella `utenti`
---
-ALTER TABLE `utenti`
-  ADD CONSTRAINT `ute_img_id` FOREIGN KEY (`ute_img_id`) REFERENCES `images` (`img_id`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
