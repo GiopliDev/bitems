@@ -43,61 +43,95 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-// Demo dati statici, da sostituire con API
-const chats = ref([
-  {
-    id: 1,
-    name: 'Aiden Chavez',
-    avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-    lastMessage: 'Project has been already finished and I have results to show you.',
-    messages: [
-      { id: 1, text: 'Hi Aiden, how are you? How is the project coming along?', time: '10:10 AM, Today', mine: true },
-      { id: 2, text: 'Are we meeting today?', time: '10:12 AM, Today', mine: false },
-      { id: 3, text: 'Project has been already finished and I have results to show you.', time: '10:15 AM, Today', mine: false }
-    ]
-  },
-  {
-    id: 2,
-    name: 'Vincent Porter',
-    avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
-    lastMessage: 'See you soon!',
-    messages: [
-      { id: 1, text: 'See you soon!', time: 'Yesterday', mine: false }
-    ]
-  },
-  {
-    id: 3,
-    name: 'Monica Ward',
-    avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-    lastMessage: 'Thanks!',
-    messages: [
-      { id: 1, text: 'Thanks!', time: 'Yesterday', mine: false }
-    ]
-  }
-])
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import axios from 'axios'
+
+const route = useRoute()
+const chats = ref([])
 const search = ref('')
-const selectedChatId = ref(chats.value[0]?.id || null)
+const selectedChatId = ref(null)
 const newMessage = ref('')
+const selectedChat = ref(null)
+
+// Load chats on mount
+onMounted(async () => {
+  await loadChats()
+  
+  // If we have query parameters, create a new chat
+  if (route.query.itemId && route.query.sellerId) {
+    await createChat(route.query.itemId, route.query.sellerId)
+  }
+})
+
+async function loadChats() {
+  try {
+    const response = await axios.get('http://localhost:80/bitems/frontend/backend/chatManager.php')
+    if (response.data.success) {
+      chats.value = response.data.chats
+      if (chats.value.length > 0 && !selectedChatId.value) {
+        selectedChatId.value = chats.value[0].id
+      }
+    }
+  } catch (error) {
+    console.error('Error loading chats:', error)
+  }
+}
+
+async function createChat(itemId, sellerId) {
+  try {
+    const response = await axios.post('http://localhost:80/bitems/frontend/backend/chatManager.php', {
+      itemId,
+      sellerId
+    })
+    
+    if (response.data.success) {
+      await loadChats()
+      selectedChatId.value = response.data.chatId
+    }
+  } catch (error) {
+    console.error('Error creating chat:', error)
+  }
+}
+
+async function sendMessage() {
+  if (!newMessage.value.trim() || !selectedChatId.value) return
+  
+  try {
+    const response = await axios.post('http://localhost:80/bitems/frontend/backend/chatManager.php', {
+      chatId: selectedChatId.value,
+      content: newMessage.value
+    })
+    
+    if (response.data.success) {
+      newMessage.value = ''
+      await loadChats()
+    }
+  } catch (error) {
+    console.error('Error sending message:', error)
+  }
+}
 
 const filteredChats = computed(() => {
   if (!search.value) return chats.value
   return chats.value.filter(c => c.name.toLowerCase().includes(search.value.toLowerCase()))
 })
-const selectedChat = computed(() => chats.value.find(c => c.id === selectedChatId.value))
+
+watch(selectedChatId, async (newId) => {
+  if (newId) {
+    try {
+      const response = await axios.get(`http://localhost:80/bitems/frontend/backend/chatManager.php?chatId=${newId}`)
+      if (response.data.success) {
+        selectedChat.value = response.data.chat
+      }
+    } catch (error) {
+      console.error('Error loading chat messages:', error)
+    }
+  }
+})
 
 function selectChat(id) {
   selectedChatId.value = id
-}
-function sendMessage() {
-  if (!newMessage.value.trim() || !selectedChat.value) return
-  selectedChat.value.messages.push({
-    id: Date.now(),
-    text: newMessage.value,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', Today',
-    mine: true
-  })
-  newMessage.value = ''
 }
 </script>
 

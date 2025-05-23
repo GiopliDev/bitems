@@ -8,7 +8,20 @@
         </a>
         <nav class="nav-links">
           <a href="/" class="nav-link">Home</a>
-          <a href="/" class="nav-link">Giochi</a>
+          <div class="nav-link dropdown">
+            <span class="dropdown-trigger" @click="toggleDropdown">Giochi Affiliati</span>
+            <div class="dropdown-menu" v-if="showDropdown">
+              <router-link 
+                v-for="game in games" 
+                :key="game.id"
+                :to="{ path: '/catalogo', query: { game: game.name }}"
+                class="dropdown-item"
+                @click="closeDropdown"
+              >
+                {{ game.name }}
+              </router-link>
+            </div>
+          </div>
           <a href="/catalogo" class="nav-link">Oggetti Virtuali</a>
           <a href="/top-vendite" class="nav-link">Top Vendite</a>
         </nav>
@@ -25,13 +38,47 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  user: {
-    type: Object,
-    default: null
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from '@/config/axios'
+
+interface Game {
+  id: number;
+  name: string;
+}
+
+interface User {
+  ute_username?: string;
+  ute_balance?: number;
+}
+
+const props = defineProps<{
+  user: User | null;
+}>();
+
+const router = useRouter()
+const games = ref<Game[]>([])
+const showDropdown = ref(false)
+
+onMounted(async () => {
+  try {
+    const response = await axios.get('/bitems/frontend/backend/getGames.php')
+    if (response.data.success) {
+      games.value = response.data.games
+    }
+  } catch (error) {
+    console.error('Error loading games:', error)
   }
-});
+})
+
+function closeDropdown() {
+  showDropdown.value = false
+}
+
+function toggleDropdown() {
+  showDropdown.value = !showDropdown.value
+}
 
 const emit = defineEmits(['show-login', 'show-register']);
 </script>
@@ -151,6 +198,60 @@ header {
   text-align: right;
   font-weight: 500;
   margin-left: 1rem;
+}
+
+.dropdown {
+  position: relative;
+  cursor: pointer;
+}
+
+.dropdown-trigger {
+  color: var(--on-surface);
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: color 0.2s;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.dropdown-trigger::after {
+  content: '▼';
+  font-size: 0.8rem;
+  transition: transform 0.2s;
+}
+
+.dropdown-trigger:hover {
+  color: var(--secondary);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--primary-light);
+  border-radius: 8px;
+  padding: 0.5rem 0;
+  min-width: 220px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.dropdown-item {
+  display: block;
+  padding: 0.6rem 1rem;
+  color: var(--on-surface);
+  text-decoration: none;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.dropdown-item:hover {
+  background: var(--surface-light);
+  color: var(--secondary);
 }
 
 @media (max-width: 768px) {

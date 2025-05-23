@@ -8,7 +8,7 @@
             <i class="fas fa-edit"></i> Modifica
           </button>
           <button class="delete-btn" @click="confirmDelete">
-            <i class="fas fa-trash"></i>
+            <i class="fas fa-trash"></i> 🗑️
           </button>
         </div>
       </div>
@@ -40,12 +40,16 @@
         <p class="item-desc">{{ item.art_descrizione }}</p>
       </div>
       <div class="item-general-actions">
-        <span class="like">
-          👍 {{ item.likes || 0 }}
-        </span>
-        <span class="dislike">
-          👎 {{ item.dislikes || 0 }}
-        </span>
+        <div class="reaction-stats">
+          <span class="stat like">
+            <span class="emoji">👍</span>
+            <span class="count">{{ item.likes || 0 }}</span>
+          </span>
+          <span class="stat dislike">
+            <span class="emoji">👎</span>
+            <span class="count">{{ item.dislikes || 0 }}</span>
+          </span>
+        </div>
         <button class="bookmark-btn" @click="addBookmark">
           🔖 Bookmark
         </button>
@@ -110,8 +114,7 @@
           <span>{{ orderQty }}</span>
           <button @click="orderQty < item.art_qtaDisp && orderQty++">+</button>
         </div>
-        <button v-if="isLoggedIn" class="main-btn" @click="showPaymentPopup = true">Procedi con l'ordine</button>
-        <button v-else class="main-btn" @click="showLoginAlert">Procedi con l'ordine</button>
+        <button class="main-btn" @click="showPaymentPopup = true">Procedi con l'ordine</button>
       </div>
     </div>
   </div>
@@ -214,18 +217,30 @@ const isLoggedIn = computed(() => {
 const reviewRating = ref<number | null>(null)
 const reviewDescription = ref('')
 const canReview = ref(false)
+const hasLiked = ref(false)
+const hasDisliked = ref(false)
+const isPurchased = ref(false)
 
 onMounted(async () => {
   try {
-    const response = await axios.get(`bitems/frontend/backend/getItem.php?id=${route.query.id}`)
+    const response = await axios.get(`/bitems/frontend/backend/getItem.php?id=${route.query.id}`, {
+      withCredentials: true
+    })
     item.value = response.data.item
     if (item.value?.images?.length) {
       currentImage.value = `/bitems/frontend/UploadedImages/${item.value.images[0]}`
     }
 
     // Check if user can review
-    const reviewCheck = await axios.get(`/bitems/frontend/backend/checkCanReview.php?itemId=${route.query.id}`)
+    const reviewCheck = await axios.get(`/bitems/frontend/backend/checkCanReview.php?itemId=${route.query.id}`, {
+      withCredentials: true
+    })
     canReview.value = reviewCheck.data.canReview
+    
+    // Check user's like/dislike status
+    await checkUserReaction()
+    // Check purchase status after item is loaded
+    await checkPurchaseStatus()
   } catch (error) {
     console.error('Errore nel recupero dei dati:', error)
   }
@@ -261,17 +276,25 @@ function closeAlert() {
   showAlert.value = false
 }
 
-async function addBookmark() { //mandare le richieste non sottoforma di json ma con i dati in formato urlencoded
-  const response = await axios.post('http://localhost:5173/bitems/frontend/backend/bookmarks.php', {
-    id_utente: sessionStorage.getItem('user_id'),
-    id_articolo: item.value?.art_id, //definito in tutti i casi
-    action: 'addBookmark'
-  }, {
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
+async function addBookmark() {
+  const formData = new URLSearchParams();
+  formData.append('id_articolo', item.value?.art_id?.toString() || '');
+  formData.append('action', 'addBookmark');
+
+  const response = await axios.post('/bitems/frontend/backend/bookmarks.php', 
+    formData,
+    {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
     }
-  })
-  console.log(response.data) //debug
+  );
+  
+  if (response.data.success) {
+    showCustomAlert('Successo', 'Articolo aggiunto ai segnalibri');
+  } else {
+    showCustomAlert('Errore', response.data.error || 'Errore durante l\'aggiunta ai segnalibri');
+  }
 }
 
 function showLoginAlert() {
@@ -319,15 +342,23 @@ async function handleReviewSubmitted() {
   canReview.value = false
 }
 
-function handlePaymentSuccess() {
+async function handlePaymentSuccess() {
   showPaymentPopup.value = false
+  isPurchased.value = true
+  console.log('Payment successful, isPurchased set to:', isPurchased.value)
+  
   // Ricarica i dati dell'articolo per aggiornare la quantità disponibile
-  loadItemData()
+  await loadItemData()
+  
+  // Ricontrolla lo stato dell'acquisto
+  await checkPurchaseStatus()
 }
 
 async function loadItemData() {
   try {
-    const response = await axios.get(`bitems/frontend/backend/getItem.php?id=${route.query.id}`)
+    const response = await axios.get(`/bitems/frontend/backend/getItem.php?id=${route.query.id}`, {
+      withCredentials: true
+    })
     item.value = response.data.item
   } catch (error) {
     console.error('Error loading item data:', error)
@@ -343,6 +374,93 @@ function formatDate(timestamp: string) {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+async function handleLike() {
+  if (!isLoggedIn.value) {
+    showLoginAlert()
+    return
+  }
+  
+  try {
+    const response = await axios.post('/bitems/frontend/backend/likeItem.php', {
+      itemId: item.value?.art_id,
+      action: hasLiked.value ? 'unlike' : 'like'
+    })
+    
+    if (response.data.success) {
+      hasLiked.value = !hasLiked.value
+      if (hasLiked.value) {
+        hasDisliked.value = false
+      }
+      // Aggiorna il conteggio dei like/dislike
+      if (item.value) {
+        item.value.likes = response.data.likes
+        item.value.dislikes = response.data.dislikes
+      }
+    }
+  } catch (error) {
+    console.error('Error handling like:', error)
+  }
+}
+
+async function handleDislike() {
+  if (!isLoggedIn.value) {
+    showLoginAlert()
+    return
+  }
+  
+  try {
+    const response = await axios.post('/bitems/frontend/backend/likeItem.php', {
+      itemId: item.value?.art_id,
+      action: hasDisliked.value ? 'undislike' : 'dislike'
+    })
+    
+    if (response.data.success) {
+      hasDisliked.value = !hasDisliked.value
+      if (hasDisliked.value) {
+        hasLiked.value = false
+      }
+      // Aggiorna il conteggio dei like/dislike
+      if (item.value) {
+        item.value.likes = response.data.likes
+        item.value.dislikes = response.data.dislikes
+      }
+    }
+  } catch (error) {
+    console.error('Error handling dislike:', error)
+  }
+}
+
+// Aggiungi questa funzione per controllare se l'utente ha già messo like/dislike
+async function checkUserReaction() {
+  if (!isLoggedIn.value || !item.value) return
+  
+  try {
+    const response = await axios.get(`/bitems/frontend/backend/checkUserReaction.php?itemId=${item.value.art_id}`)
+    hasLiked.value = response.data.hasLiked
+    hasDisliked.value = response.data.hasDisliked
+  } catch (error) {
+    console.error('Error checking user reaction:', error)
+  }
+}
+
+async function checkPurchaseStatus() {
+  if (!item.value) return
+  
+  try {
+    console.log('Checking purchase status for item:', item.value.art_id)
+    const response = await axios.get(`/bitems/frontend/backend/checkPurchase.php?itemId=${item.value.art_id}`, {
+      withCredentials: true
+    })
+    console.log('Purchase status response:', response.data)
+    if (response.data.success) {
+      isPurchased.value = response.data.purchased
+      console.log('Purchase status updated:', isPurchased.value)
+    }
+  } catch (error) {
+    console.error('Error checking purchase status:', error)
+  }
 }
 </script>
 
@@ -378,8 +496,7 @@ function formatDate(timestamp: string) {
 }
 
 .item-actions {
-  display: flex;
-  gap: 1rem;
+  display: none;
 }
 
 .edit-btn, .delete-btn {
@@ -428,51 +545,78 @@ function formatDate(timestamp: string) {
   justify-content: center;
   gap: 1.5rem;
   margin-bottom: 0.7rem;
+  position: relative;
+  min-height: 320px;
 }
 
 .slider-img {
-  width: 320px;
-  height: 180px;
-  object-fit: cover;
+  width: 100%;
+  max-width: 640px;
+  height: 360px;
+  object-fit: contain;
   border-radius: 12px;
   background: var(--surface-light);
+  transition: opacity 0.3s ease;
 }
 
 .slider-btn {
-  background: none;
+  background: var(--surface);
   border: 2px solid var(--secondary);
   color: var(--secondary);
   border-radius: 50%;
-  width: 38px;
-  height: 38px;
-  font-size: 1.3rem;
+  width: 48px;
+  height: 48px;
+  font-size: 1.5rem;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: all 0.2s;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.slider-btn:first-child {
+  left: 1rem;
+}
+
+.slider-btn:last-child {
+  right: 1rem;
 }
 
 .slider-btn:hover {
-  border-color: var(--primary-light);
-  color: var(--primary-light);
+  background: var(--secondary);
+  color: var(--on-primary);
+  transform: translateY(-50%) scale(1.1);
 }
 
 .slider-dots {
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 1.2rem;
+  gap: 0.8rem;
+  margin: 1rem 0;
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--surface-light);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  border: 2px solid var(--secondary);
 }
 
 .dot.active {
-  background: var(--primary-light);
+  background: var(--secondary);
+  transform: scale(1.2);
+}
+
+.dot:hover {
+  transform: scale(1.1);
 }
 
 .item-info-row {
@@ -526,16 +670,67 @@ function formatDate(timestamp: string) {
   display: flex;
   gap: 1.5rem;
   align-items: center;
-  margin-bottom: 2rem;
+  margin: 2rem 0;
+  padding: 1rem;
+  background: var(--surface-light);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.like, .dislike, .bookmark {
+.reaction-stats {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.stat {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  cursor: pointer;
-  color: var(--on-surface);
+  gap: 0.8rem;
+  padding: 0.8rem 1.5rem;
+  border-radius: 12px;
+  background: var(--surface);
+  min-width: 100px;
+  justify-content: center;
+}
+
+.stat .emoji {
+  font-size: 1.4rem;
+}
+
+.stat .count {
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.like {
+  color: #4CAF50;
+}
+
+.dislike {
+  color: #f44336;
+}
+
+.bookmark-btn {
+  margin-left: auto;
+  background: var(--surface);
+  border: 2px solid var(--secondary);
+  color: var(--secondary);
+  padding: 0.8rem 1.5rem;
+  border-radius: 12px;
   font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bookmark-btn:hover {
+  background: var(--secondary);
+  color: var(--on-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .item-reviews {
@@ -867,20 +1062,7 @@ function formatDate(timestamp: string) {
   font-weight: 500;
 }
 
-.bookmark-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  cursor: pointer;
-  color: var(--on-surface);
-  font-size: 1.1rem;
-  background: none;
-  border: none;
-  padding: 0.5rem;
-  transition: color 0.2s;
-}
-
-.bookmark-btn:hover {
-  color: var(--primary-light);
+.buy-btn, .message-btn {
+  display: none;
 }
 </style> 

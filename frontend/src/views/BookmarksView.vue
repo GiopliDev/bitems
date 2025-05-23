@@ -21,43 +21,51 @@ const bookmarkedItems = ref([])
 
 async function fetchBookmarks() {
   try {
-    const response = await axios.post('/bitems/frontend/backend/bookmarks.php', {
-      action: 'getBookmarks'
-    }, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
+    const formData = new URLSearchParams();
+    formData.append('action', 'getBookmarks');
+
+    const response = await axios.post('/bitems/frontend/backend/bookmarks.php', 
+      formData,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
       }
-    })
+    );
     
     if (response.data.success) {
-      bookmarkedItems.value = response.data.bookmarks
+      bookmarkedItems.value = response.data.bookmarks;
     } else {
-      console.error('Error fetching bookmarks:', response.data.error)
+      console.error('Error fetching bookmarks:', response.data.error);
     }
   } catch (error) {
-    console.error('Error fetching bookmarks:', error)
+    console.error('Error fetching bookmarks:', error);
   }
 }
 
 async function removeBookmark(articleId) {
   try {
-    const response = await axios.post('/bitems/frontend/backend/bookmarks.php', {
-      action: 'removeBookmark',
-      id_articolo: articleId
-    }, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
+    const formData = new URLSearchParams();
+    formData.append('action', 'removeBookmark');
+    formData.append('id_articolo', articleId.toString());
+
+    const response = await axios.post('/bitems/frontend/backend/bookmarks.php', 
+      formData,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
       }
-    })
+    );
     
     if (response.data.success) {
       // Rimuovi l'articolo dalla lista locale
-      bookmarkedItems.value = bookmarkedItems.value.filter(item => item.art_id !== articleId)
+      bookmarkedItems.value = bookmarkedItems.value.filter(item => item.art_id !== articleId);
     } else {
-      console.error('Error removing bookmark:', response.data.error)
+      console.error('Error removing bookmark:', response.data.error);
     }
   } catch (error) {
-    console.error('Error removing bookmark:', error)
+    console.error('Error removing bookmark:', error);
   }
 }
 

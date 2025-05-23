@@ -4,15 +4,9 @@ header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 header('Access-Control-Allow-Credentials: true');
 header('Content-Type: application/json');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
+require_once 'cors.php';
 require_once 'connection.php';
 require_once 'utils.php';
-require_once 'getItem.php';
 
 //i bookmarks sono privati,puo vederli solo l utente corrispondente all id della sessione
 //<br />
@@ -79,23 +73,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->close();
     }
     else if ($action === 'getBookmarks') {
-        // Prima otteniamo gli ID degli articoli nei bookmark
-        $sql = "SELECT seg_art_id FROM segnalibri WHERE seg_ute_id = ? ORDER BY seg_timestamp DESC";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param('i', $userId);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $whereClause = "articoli.art_id IN (SELECT seg_art_id FROM segnalibri WHERE seg_ute_id = ?)";
+        $bookmarks = getItemCardData($whereClause, [$userId], 'i');
         
-        $bookmarks = [];
-        while ($row = $result->fetch_assoc()) {
-            $item = getItemDetails($row['seg_art_id']);
-            if ($item) {
-                $bookmarks[] = $item;
-            }
+        if (isset($bookmarks['error'])) {
+            http_response_code(500);
+            echo json_encode(['error' => $bookmarks['error']]);
+            exit;
         }
         
         echo json_encode(['success' => true, 'bookmarks' => $bookmarks]);
-        $stmt->close();
     }
     else {
         http_response_code(400);

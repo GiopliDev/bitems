@@ -5,19 +5,19 @@
       <section class="catalogo-section">
         <h3 class="section-title hot">🔥 Hot Items</h3>
         <div class="catalogo-cards">
-          <ItemCard v-for="item in hotItems" :key="item.id" :item="item" />
+          <ItemCard v-for="item in hotItems" :key="item.art_id" :item="item" />
         </div>
       </section>
       <section class="catalogo-section">
         <h3 class="section-title recent">🕒 Recent Items</h3>
         <div class="catalogo-cards">
-          <ItemCard v-for="item in recentItems" :key="item.id" :item="item" />
+          <ItemCard v-for="item in recentItems" :key="item.art_id" :item="item" />
         </div>
       </section>
       <section class="catalogo-section" v-for="(items, game) in itemsByGame" :key="game">
         <h3 class="section-title">{{ game }}</h3>
         <div class="catalogo-cards">
-          <ItemCard v-for="item in items" :key="item.id" :item="item" />
+          <ItemCard v-for="item in items" :key="item.art_id" :item="item" />
           <router-link 
             v-if="!route.query.game" 
             :to="{ path: '/catalogo', query: { game: game } }" 
@@ -62,12 +62,28 @@ async function loadCatalogo() {
       })
       itemsByGame.value = { [route.query.game as string]: response.data.data }
     } else {
-      // Altrimenti carica il catalogo completo
+      // Carica il catalogo completo
       const response = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
         params: { action: 'getCatalogoDivisoInSezioni' }
       })
       catalogo.value = response.data.data
       itemsByGame.value = response.data.data
+
+      // Carica gli oggetti trending
+      const trendingResponse = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
+        params: { action: 'getTrendingItems' }
+      })
+      if (trendingResponse.data.success) {
+        hotItems.value = trendingResponse.data.items
+      }
+
+      // Carica gli oggetti recenti
+      const recentResponse = await axios.get('/bitems/frontend/backend/getCatalogo.php', {
+        params: { action: 'getRecentItems' }
+      })
+      if (recentResponse.data.success) {
+        recentItems.value = recentResponse.data.items
+      }
     }
   } catch (error) {
     console.error('Error loading catalog:', error)
@@ -96,13 +112,13 @@ watch(() => route.query.game, loadCatalogo)
   box-shadow: 0 2px 16px #0002;
 }
 .catalogo-section {
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
 }
 .section-title {
   color: var(--primary-light);
   font-size: 1.3rem;
   font-weight: 700;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   letter-spacing: 0.01em;
   display: flex;
   align-items: center;
@@ -117,12 +133,12 @@ watch(() => route.query.game, loadCatalogo)
 .catalogo-cards {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.75rem;
   margin-bottom: 0.5rem;
 }
 .see-more {
   display: inline-block;
-  margin-left: 1rem;
+  margin-left: 0.75rem;
   color: var(--primary-light);
   font-size: 1rem;
   text-decoration: underline;
@@ -134,7 +150,7 @@ watch(() => route.query.game, loadCatalogo)
 }
 h2 {
   color: var(--on-background);
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: 0.01em;
