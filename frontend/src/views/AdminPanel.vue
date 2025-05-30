@@ -371,17 +371,19 @@ function editUser(user) {
 async function handleUserUpdate(updatedUser) {
   try {
     console.log('Updating user:', updatedUser)
-    const response = await axios.put('/bitems/frontend/backend/AdminPanel.php', {
-      action: 'updateUser',
-      userId: updatedUser.ute_id,
-      updates: {
-        ute_username: updatedUser.ute_username,
-        ute_email: updatedUser.ute_email,
-        ute_saldo: updatedUser.ute_saldo,
-        ute_rep: updatedUser.ute_rep
+    const formData = new FormData()
+    formData.append('action', 'updateUser')
+    formData.append('userId', updatedUser.ute_id)
+    formData.append('updates[ute_username]', updatedUser.ute_username)
+    formData.append('updates[ute_email]', updatedUser.ute_email)
+    formData.append('updates[ute_saldo]', updatedUser.ute_saldo)
+    formData.append('updates[ute_rep]', updatedUser.ute_rep)
+
+    const response = await axios.post('/bitems/frontend/backend/AdminPanel.php', formData, {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'multipart/form-data'
       }
-    }, {
-      withCredentials: true
     })
     
     console.log('Update response:', response.data)

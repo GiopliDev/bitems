@@ -17,7 +17,7 @@ require_once 'connection.php';
 $conn = connection();
 
 // Gestione delle richieste
-$action = $_GET['action'] ?? '';
+$action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 switch ($action) {
     case 'getUsers':
@@ -89,7 +89,12 @@ switch ($action) {
         break;
 
     case 'updateUser':
-        $data = json_decode(file_get_contents('php://input'), true);
+        // Get data from POST or raw input
+        $data = $_POST;
+        if (empty($data)) {
+            $data = json_decode(file_get_contents('php://input'), true);
+        }
+        
         $userId = $data['userId'] ?? 0;
         $updates = $data['updates'] ?? [];
         
@@ -121,13 +126,26 @@ switch ($action) {
         
         $query = "UPDATE utenti SET " . implode(', ', $setClauses) . " WHERE ute_id = ?";
         $stmt = mysqli_prepare($conn, $query);
-        mysqli_stmt_bind_param($stmt, $types, ...$values);
         
-        if (mysqli_stmt_execute($stmt)) {
-            echo "true";
-        } else {
+        if (!$stmt) {
+            error_log("Prepare failed: " . mysqli_error($conn));
             echo "false";
+            exit;
         }
+        
+        if (!mysqli_stmt_bind_param($stmt, $types, ...$values)) {
+            error_log("Binding parameters failed: " . mysqli_stmt_error($stmt));
+            echo "false";
+            exit;
+        }
+        
+        if (!mysqli_stmt_execute($stmt)) {
+            error_log("Execute failed: " . mysqli_stmt_error($stmt));
+            echo "false";
+            exit;
+        }
+        
+        echo "true";
         break;
 
     case 'banUser':
