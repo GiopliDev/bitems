@@ -7,18 +7,17 @@
         class="avatar"
       >
       <h3>{{ user?.ute_username || 'User' }}</h3>
+      <BalanceEditor :user="user" />
     </div>
     <nav class="sidebar-menu">
-      <router-link 
-        :to="{ 
-          path: '/profile',
-          query: { id: user?.ute_id }
-        }" 
+      <a 
+        href="#" 
         class="sidebar-link" 
-        active-class="active"
+        :class="{ active: $route.path === '/profile' && $route.query.id === user?.ute_id?.toString() }"
+        @click.prevent="goToProfile"
       >
         Profile
-      </router-link>
+      </a>
       <router-link to="/addItem" class="sidebar-link" active-class="active">Add Item</router-link>
       <router-link to="/history" class="sidebar-link" active-class="active">See History</router-link>
       <router-link to="/chats" class="sidebar-link" active-class="active">Chats</router-link>
@@ -33,12 +32,22 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import axios from '@/config/axios'
+import BalanceEditor from './BalanceEditor.vue'
 
 const props = defineProps({
   user: Object
 })
 
 const router = useRouter()
+
+async function goToProfile() {
+  if (props.user?.ute_id) {
+    router.push({
+      path: '/profile',
+      query: { id: props.user.ute_id }
+    })
+  }
+}
 
 async function logout() {
   try {
@@ -70,6 +79,7 @@ async function logout() {
   flex-direction: column;
   align-items: center;
   margin-bottom: 2rem;
+  gap: 0.7rem;
 }
 .avatar {
   width: 54px;

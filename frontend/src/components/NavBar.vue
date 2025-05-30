@@ -22,7 +22,7 @@
           </div>
           <a href="/catalogo" class="nav-link">Oggetti Virtuali</a>
           <a href="/top-vendite" class="nav-link">Top Vendite</a>
-          <a v-if="isAdmin" href="/admin" class="nav-link admin">Admin Panel</a>
+          <a v-if="user?.ute_username === 'Giopli'" href="/admin" class="nav-link admin">Admin Panel</a>
         </nav>
         <div v-if="user" class="user-info-bar">
           Hi {{ user?.ute_username || 'User' }}!<br>
@@ -44,7 +44,6 @@ import axios from '@/config/axios'
 
 const router = useRouter()
 const games = ref<string[]>([])
-const isAdmin = ref(false)
 
 defineProps({
   user: {
@@ -66,15 +65,6 @@ async function loadGames() {
   }
 }
 
-async function checkAdminStatus() {
-  try {
-    const response = await axios.get('/bitems/frontend/backend/session.php')
-    isAdmin.value = response.data.isAdmin
-  } catch (error) {
-    console.error('Error checking admin status:', error)
-  }
-}
-
 function filterByGame(game: string) {
   router.push({
     path: '/catalogo',
@@ -84,7 +74,6 @@ function filterByGame(game: string) {
 
 onMounted(() => {
   loadGames()
-  checkAdminStatus()
 })
 </script>
 

@@ -211,7 +211,7 @@ const filteredItems = computed(() => {
 // Check if user is admin
 const isAdmin = computed(() => {
   const user = JSON.parse(localStorage.getItem('user') || '{}')
-  return user.ute_id === 1
+  return user.ute_username === 'Giopli'
 })
 
 // Methods
@@ -227,10 +227,11 @@ function closeAlert() {
 
 async function checkSession() {
   try {
-    const response = await axios.get('http://localhost:80/bitems/frontend/backend/checkSession.php', {
+    const response = await axios.get('/bitems/frontend/backend/session.php', {
       withCredentials: true
     })
-    if (response.data === "false") {
+    console.log('Session check response:', response.data)
+    if (!response.data.isLoggedIn) {
       showCustomAlert('Errore', 'Sessione scaduta. Effettua nuovamente il login.')
       router.push('/')
       return false
@@ -246,9 +247,15 @@ async function checkSession() {
 
 async function loadUsers(page = 1) {
   try {
-    const response = await axios.get(`http://localhost:80/bitems/frontend/backend/AdminPanel.php?action=getUsers&page=${page}`, {
+    console.log('Loading users page:', page)
+    const response = await axios.get('/bitems/frontend/backend/AdminPanel.php', {
+      params: { 
+        action: 'getUsers',
+        page: page 
+      },
       withCredentials: true
     })
+    console.log('Users response:', response.data)
     if (page === 1) {
       users.value = response.data.users
     } else {
@@ -265,9 +272,15 @@ async function loadUsers(page = 1) {
 
 async function loadItems(page = 1) {
   try {
-    const response = await axios.get(`http://localhost:80/bitems/frontend/backend/AdminPanel.php?action=getItems&page=${page}`, {
+    console.log('Loading items page:', page)
+    const response = await axios.get('/bitems/frontend/backend/AdminPanel.php', {
+      params: { 
+        action: 'getItems',
+        page: page 
+      },
       withCredentials: true
     })
+    console.log('Items response:', response.data)
     if (page === 1) {
       items.value = response.data.items
     } else {
@@ -310,60 +323,6 @@ function viewItemDetails(item) {
   router.push(`/itemdetail?id=${item.art_id}`)
 }
 
-function editUser(user) {
-  selectedUser.value = user
-  showEditUserPopup.value = true
-}
-
-async function handleUserUpdate(updatedUser) {
-  try {
-    const response = await axios.put('http://localhost:80/bitems/frontend/backend/AdminPanel.php?action=updateUser', {
-      userId: updatedUser.ute_id,
-      updates: {
-        ute_username: updatedUser.ute_username,
-        ute_email: updatedUser.ute_email,
-        ute_saldo: updatedUser.ute_saldo,
-        ute_rep: updatedUser.ute_rep
-      }
-    }, {
-      withCredentials: true
-    })
-    
-    if (response.data === "true") {
-      showCustomAlert('Successo', 'Utente aggiornato con successo')
-      await loadUsers(currentUserPage.value)
-    } else {
-      showCustomAlert('Errore', 'Errore durante l\'aggiornamento dell\'utente')
-    }
-  } catch (error) {
-    console.error('Error updating user:', error)
-    showCustomAlert('Errore', 'Si è verificato un errore durante l\'aggiornamento dell\'utente')
-  }
-  showEditUserPopup.value = false
-}
-
-async function confirmBanUser(user) {
-  if (confirm(`Sei sicuro di voler bannare l'utente ${user.ute_username}?`)) {
-    try {
-      const response = await axios.post('http://localhost:80/bitems/frontend/backend/AdminPanel.php?action=banUser', {
-        userId: user.ute_id
-      }, {
-        withCredentials: true
-      })
-      
-      if (response.data === "true") {
-        showCustomAlert('Successo', `Utente ${user.ute_username} bannato con successo`)
-        await loadUsers(currentUserPage.value)
-      } else {
-        showCustomAlert('Errore', 'Errore durante il ban dell\'utente')
-      }
-    } catch (error) {
-      console.error('Error banning user:', error)
-      showCustomAlert('Errore', 'Si è verificato un errore durante il ban dell\'utente')
-    }
-  }
-}
-
 function editItem(item) {
   selectedItem.value = item
   showEditPopup.value = true
@@ -372,10 +331,16 @@ function editItem(item) {
 async function confirmDeleteItem(item) {
   if (confirm(`Sei sicuro di voler eliminare l'articolo "${item.art_titolo}"?`)) {
     try {
-      const response = await axios.delete(`http://localhost:80/bitems/frontend/backend/AdminPanel.php?action=deleteItem&id=${item.art_id}`, {
+      console.log('Deleting item:', item)
+      const response = await axios.delete('/bitems/frontend/backend/AdminPanel.php', {
+        params: {
+          action: 'deleteItem',
+          id: item.art_id
+        },
         withCredentials: true
       })
       
+      console.log('Delete response:', response.data)
       if (response.data === "true") {
         showCustomAlert('Successo', 'Articolo eliminato con successo')
         await loadItems(currentItemPage.value)
@@ -398,18 +363,103 @@ function handleItemUpdate(updatedItem) {
   showEditPopup.value = false
 }
 
+function editUser(user) {
+  selectedUser.value = user
+  showEditUserPopup.value = true
+}
+
+async function handleUserUpdate(updatedUser) {
+  try {
+    console.log('Updating user:', updatedUser)
+    const response = await axios.put('/bitems/frontend/backend/AdminPanel.php', {
+      action: 'updateUser',
+      userId: updatedUser.ute_id,
+      updates: {
+        ute_username: updatedUser.ute_username,
+        ute_email: updatedUser.ute_email,
+        ute_saldo: updatedUser.ute_saldo,
+        ute_rep: updatedUser.ute_rep
+      }
+    }, {
+      withCredentials: true
+    })
+    
+    console.log('Update response:', response.data)
+    if (response.data === "true") {
+      showCustomAlert('Successo', 'Utente aggiornato con successo')
+      await loadUsers(currentUserPage.value)
+    } else {
+      showCustomAlert('Errore', 'Errore durante l\'aggiornamento dell\'utente')
+    }
+  } catch (error) {
+    console.error('Error updating user:', error)
+    showCustomAlert('Errore', 'Si è verificato un errore durante l\'aggiornamento dell\'utente')
+  }
+  showEditUserPopup.value = false
+}
+
+async function confirmBanUser(user) {
+  if (confirm(`Sei sicuro di voler bannare l'utente ${user.ute_username}?`)) {
+    try {
+      console.log('Banning user:', user)
+      const response = await axios.post('/bitems/frontend/backend/AdminPanel.php', {
+        action: 'banUser',
+        userId: user.ute_id
+      }, {
+        withCredentials: true
+      })
+      
+      console.log('Ban response:', response.data)
+      if (response.data === "true") {
+        showCustomAlert('Successo', `Utente ${user.ute_username} bannato con successo`)
+        await loadUsers(currentUserPage.value)
+      } else {
+        showCustomAlert('Errore', 'Errore durante il ban dell\'utente')
+      }
+    } catch (error) {
+      console.error('Error banning user:', error)
+      showCustomAlert('Errore', 'Si è verificato un errore durante il ban dell\'utente')
+    }
+  }
+}
+
 // Initialize data
 onMounted(async () => {
-  if (!isAdmin.value) {
+  console.log('AdminPanel mounted')
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  console.log('Current user:', user)
+  
+  if (user.ute_username !== 'Giopli') {
+    console.log('User is not admin')
     showCustomAlert('Errore', 'Accesso non autorizzato')
     router.push('/')
     return
   }
   
-  if (!await checkSession()) return
-  
-  console.log('Loading admin panel data...')
-  await Promise.all([loadUsers(1), loadItems(1)])
+  try {
+    const sessionValid = await checkSession()
+    console.log('Session check result:', sessionValid)
+    
+    if (!sessionValid) {
+      console.log('Session check failed')
+      return
+    }
+    
+    console.log('Loading admin panel data...')
+    await Promise.all([
+      loadUsers(1).catch(error => {
+        console.error('Error loading users:', error)
+        showCustomAlert('Errore', 'Impossibile caricare gli utenti')
+      }),
+      loadItems(1).catch(error => {
+        console.error('Error loading items:', error)
+        showCustomAlert('Errore', 'Impossibile caricare gli articoli')
+      })
+    ])
+  } catch (error) {
+    console.error('Error in onMounted:', error)
+    showCustomAlert('Errore', 'Si è verificato un errore durante il caricamento dei dati')
+  }
 })
 </script>
 

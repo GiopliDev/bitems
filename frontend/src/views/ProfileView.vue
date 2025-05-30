@@ -1,74 +1,94 @@
 <template>
   <div class="profile-layout">
-    <div class="profile-header">
-      <div class="profile-image-container">
-        <img 
-          :src="profile.ute_img_url ? `/bitems/frontend/UploadedImages/${profile.ute_img_url}` : '/default-avatar.png'" 
-          alt="Profile" 
-          class="profile-image" 
-        />
-        <button v-if="isOwnProfile" class="edit-image-btn" @click="triggerImageUpload">
-          <span class="icon">📷</span>
-        </button>
-        <input 
-          type="file" 
-          ref="imageInput" 
-          accept="image/*" 
-          style="display: none" 
-          @change="onImageChange"
-        />
-      </div>
-      <div class="profile-info">
-        <div class="name-container">
-          <h1 v-if="!isEditing || !isOwnProfile">{{ profile.ute_username }}</h1>
-          <input 
-            v-else 
-            v-model="editingName" 
-            type="text" 
-            class="edit-input"
-            @blur="updateName"
-          />
-          <button v-if="isOwnProfile" class="edit-btn" @click="startEditing">
-            <span class="icon">✏️</span>
-          </button>
-        </div>
-        <div class="description-container">
-          <p v-if="!isEditing || !isOwnProfile">{{ profile.ute_dex || 'Nessuna descrizione' }}</p>
-          <textarea 
-            v-else 
-            v-model="editingDescription" 
-            class="edit-input"
-            @blur="updateDescription"
-          ></textarea>
-        </div>
-        <div class="reputation">
-          <span class="rep-label">Reputazione:</span>
-          <span class="rep-value">{{ profile.ute_rep || 0 }}</span>
-        </div>
-      </div>
+    <div v-if="isLoading" class="loading">
+      Caricamento profilo...
     </div>
+    <div v-else-if="error" class="error">
+      {{ error }}
+    </div>
+    <template v-else>
+      <!-- Debug info -->
+      <div style="background: #333; color: white; padding: 10px; margin-bottom: 20px;">
+        <pre>Debug - Profile Data: {{ JSON.stringify(profile, null, 2) }}</pre>
+        <pre>Debug - User Items: {{ JSON.stringify(userItems, null, 2) }}</pre>
+      </div>
 
-    <div v-if="userItems.length > 0" class="user-items-section">
-      <h2>{{ isOwnProfile ? 'I tuoi oggetti in vendita' : 'Oggetti in vendita' }}</h2>
-      <div class="items-grid">
-        <ItemCard 
-          v-for="item in userItems" 
-          :key="item.art_id" 
-          :item="item"
-          :is-owner="isOwnProfile"
-        />
+      <div class="profile-header">
+        <div class="profile-image-container">
+          <img 
+            :src="profile.ute_img_url ? `/bitems/frontend/UploadedImages/${profile.ute_img_url}` : '/default-avatar.png'" 
+            alt="Profile" 
+            class="profile-image" 
+          />
+          <button v-if="isOwnProfile" class="edit-image-btn" @click="triggerImageUpload">
+            <span class="icon">📷</span>
+          </button>
+          <input 
+            type="file" 
+            ref="imageInput" 
+            accept="image/*" 
+            style="display: none" 
+            @change="onImageChange"
+          />
+        </div>
+        <div class="profile-info">
+          <div class="name-container">
+            <h1 v-if="!isEditing || !isOwnProfile">{{ profile.ute_username || 'Username non disponibile' }}</h1>
+            <input 
+              v-else 
+              v-model="editingName" 
+              type="text" 
+              class="edit-input"
+              @blur="updateName"
+            />
+            <button v-if="isOwnProfile" class="edit-btn" @click="startEditing">
+              <span class="icon">✏️</span>
+            </button>
+          </div>
+          <div class="description-container">
+            <p v-if="!isEditing || !isOwnProfile">{{ profile.ute_dex || 'Nessuna descrizione' }}</p>
+            <textarea 
+              v-else 
+              v-model="editingDescription" 
+              class="edit-input"
+              @blur="updateDescription"
+            ></textarea>
+          </div>
+          <div class="reputation">
+            <span class="rep-label">Reputazione:</span>
+            <span class="rep-value">{{ profile.ute_rep || 0 }}</span>
+          </div>
+        </div>
       </div>
-    </div>
+
+      <div v-if="userItems && userItems.length > 0" class="user-items-section">
+        <h2>{{ isOwnProfile ? 'I tuoi oggetti in vendita' : 'Oggetti in vendita' }}</h2>
+        <div class="items-grid">
+          <ItemCard 
+            v-for="item in userItems" 
+            :key="item.art_id" 
+            :item="item"
+            :is-owner="isOwnProfile"
+          />
+        </div>
+      </div>
+      <div v-else class="no-items">
+        <p>Nessun oggetto in vendita</p>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import axios from '@/config/axios'
 import ItemCard from '../components/ItemCard.vue'
 
+console.log('ProfileView component script starting')
+
 const route = useRoute()
+const router = useRouter()
 const profile = ref<any>({})
 const userItems = ref<any[]>([])
 const isEditing = ref(false)
@@ -76,12 +96,26 @@ const editingName = ref('')
 const editingDescription = ref('')
 const imageInput = ref<HTMLInputElement | null>(null)
 const currentUserId = ref<number | null>(null)
+const isLoading = ref(true)
+const error = ref<string | null>(null)
+
+console.log('Initial route query:', route.query)
 
 const isOwnProfile = computed(() => {
   return currentUserId.value === Number(route.query.id)
 })
 
-onMounted(async () => {
+async function loadProfile() {
+  console.log('loadProfile called')
+  console.log('Current route query:', route.query)
+  
+  if (!route.query.id) {
+    console.error('No profile ID in route query')
+    error.value = 'ID profilo mancante'
+    isLoading.value = false
+    return
+  }
+
   try {
     // Carica i dati della sessione
     const sessionRes = await axios.get('/bitems/frontend/backend/session.php', {
@@ -93,11 +127,29 @@ onMounted(async () => {
     const profileRes = await axios.get('/bitems/frontend/backend/getProfile.php', {
       params: { id: route.query.id }
     })
-    profile.value = profileRes.data.profile
-    userItems.value = profileRes.data.items
-  } catch (error) {
-    console.error('Error loading profile:', error)
+    
+    if (profileRes.data.success) {
+      profile.value = profileRes.data.profile
+      userItems.value = profileRes.data.items
+    } else {
+      error.value = 'Profilo non trovato'
+    }
+  } catch (err) {
+    console.error('Error loading profile:', err)
+    error.value = 'Errore nel caricamento del profilo'
+  } finally {
+    isLoading.value = false
   }
+}
+
+onMounted(() => {
+  console.log('ProfileView component mounted')
+  loadProfile()
+})
+
+watch(() => route.query.id, (newId) => {
+  console.log('Route ID changed to:', newId)
+  loadProfile()
 })
 
 function startEditing() {
@@ -167,6 +219,15 @@ async function onImageChange(e: Event) {
     console.error('Error updating image:', error)
   }
 }
+
+// Aggiungiamo un watch per il profilo per debug
+watch(profile, (newProfile) => {
+  console.log('Profile updated:', newProfile)
+}, { deep: true })
+
+watch(userItems, (newItems) => {
+  console.log('User items updated:', newItems)
+}, { deep: true })
 </script>
 
 <style scoped>
@@ -303,5 +364,26 @@ async function onImageChange(e: Event) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+  color: var(--on-surface);
+}
+
+.error {
+  color: var(--error);
+}
+
+.no-items {
+  text-align: center;
+  padding: 2rem;
+  color: var(--on-surface);
+  font-size: 1.1rem;
+  background: var(--surface);
+  border-radius: 16px;
+  margin-top: 2rem;
 }
 </style> 
